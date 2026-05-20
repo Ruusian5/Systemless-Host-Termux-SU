@@ -14,8 +14,8 @@ echo -e "\e[1;36m[→]\e[0m Backing up Termux Home Configs..."
 tar -czf "$BACKUP_DIR/termux_home.tar.gz" -C ~ .bashrc cmds.sh mount-debian.sh startxfce4_chrootDebian.sh stop-debian.sh install-tools.sh Pro-Termux-Harden
 
 # 2. Backup Debian Chroot (Requires Root)
-echo -e "\e[1;36m[→]\e[0m Compressing Debian Chroot (This may take a few minutes)..."
-su -c "tar --exclude='dev/*' --exclude='proc/*' --exclude='sys/*' --exclude='tmp/*' --exclude='run/*' --exclude='sdcard/*' -czf '$BACKUP_DIR/debian_chroot.tar.gz' -C '$DEBIANPATH' ."
+echo -e "\e[1;36m[→]\e[0m Compressing Debian Chroot (Excluding problematic types)..."
+su -c "tar --one-file-system --exclude='dev/*' --exclude='proc/*' --exclude='sys/*' --exclude='tmp/*' --exclude='run/*' --exclude='sdcard/*' --exclude='*.sock' --exclude='*.socket' -czf '$BACKUP_DIR/debian_chroot.tar.gz' -C '$DEBIANPATH' ."
 
 echo -e "\e[1;32m[✓] Backup Complete!\e[0m"
 echo -e "\e[1;35mLocation:\e[0m $BACKUP_DIR"
