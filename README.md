@@ -1,76 +1,84 @@
 # 🚀 Pro-Termux-Harden (v11.2)
-### *Transform Your Android into a Professional Linux Powerhouse.*
+### *The Ultimate Autonomous Linux Workstation for Android.*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-11.2--Harden-blue.svg)](https://github.com/Ruusian05/Pro-Termux-Harden)
+[![Version](https://img.shields.io/badge/Version-11.2--Harden-blue.svg)](https://github.com/Ruusian5/Pro-Termux-Harden)
 [![Platform](https://img.shields.io/badge/Platform-Termux--Android-orange.svg)](https://termux.com/)
 
 ---
 
 ## 🌟 The Vision
 
-**Pro-Termux-Harden** is not just a script collection; it's a **total infrastructure upgrade** for Termux. It bridges the gap between Android’s hardware and the Linux userland, providing a stable, high-performance environment for developers, power users, and Linux enthusiasts.
+**Pro-Termux-Harden** is a professional-grade infrastructure suite that transforms Termux into a high-performance, autonomous Linux environment. It is designed to bridge the deep gap between Android's locked kernel interfaces and a standard Linux userland, providing a stable platform for **Desktop-Class Development**, **Hardware-Accelerated Gaming**, and **Fluid 1080p Video Playback**.
 
 ---
 
-## ⚡ Key Highlights
+## ⚡ Technical Deep-Dive
 
-*   **🛡️ Ultimate Kernel Bridge (v11.2):** Autonomous access to `/apex`, `/odm`, `/product`, and other critical partitions.
-*   **🎮 True GPU Acceleration:** Native **Mesa Zink** integration for Adreno GPUs, providing OpenGL 4.6 and Vulkan support.
-*   **📺 Cinematic Playback:** Hardened VA-API/VDPAU driver bridges for **1080p 60fps** smooth video in browsers and media players.
-*   **📟 Ghost HUD Dashboard:** A sleek, non-blocking terminal banner with live telemetry (CPU, RAM, Temp, Battery, IP).
-*   **⚙️ Industrial Hardening:** Surgical error handling, absolute path mapping, and TTY-fixed terminal sessions.
+This repository contains the "Master Setup" used to achieve near-native performance on ARM64 hardware.
+
+### 🛡️ Ultimate Kernel Bridge (v11.2)
+Unlike standard chroots that only mount `/dev` and `/proc`, our **Kernel Bridge** establishes an autonomous hardware link. It bind-mounts:
+*   **`/apex` & `/linkerconfig`**: Vital for running Android system binaries and native libraries.
+*   **`/odm` & `/vendor`**: Direct access to proprietary hardware drivers (GPU, Camera, DSP).
+*   **`/system_ext` & `/metadata`**: Ensures full system-wide feature visibility.
+*   **`/dev/dri` & `/dev/kgsl-3d0`**: Unlocks direct Adreno GPU interaction for Mesa Zink.
+
+### 🎮 Mesa Zink & GPU Autonomy
+We leverage **Mesa Zink** (OpenGL over Vulkan) to provide a modern graphics pipeline. 
+*   **OpenGL 4.6 / GLSL 460 Support**: Enables modern rendering engines like WebRender.
+*   **Vulkan Turnip Driver**: Optimized for Adreno 6xx/7xx series GPUs.
+*   **Shader Caching**: Pre-configured 1GB cache to eliminate stuttering in apps and browsers.
+
+### 📺 Cinematic 1080p 60fps Playback
+Hardened VA-API/VDPAU driver bridges ensure that browsers like **Firefox** and **Chromium** autonomously detect and use the GPU for video decoding.
 
 ---
 
 ## ⚠️ Prerequisites (Mandatory)
 
-To use this system effectively, you **must** meet the following requirements:
-
-1.  **ROOT Access:** Necessary for establishing the Kernel Bridge and hardware partitions.
-2.  **Termux-X11:** Required for Graphical (XFCE4) Workstation support.
-3.  **Debian Chroot:** Designed to run with a Debian-based environment (provided by the installer).
+1.  **ROOT Access:** Required for Kernel Bridge mounting.
+2.  **Termux-X11:** Required for the high-performance graphics bridge.
+3.  **Busybox:** Used for lightning-fast, robust mounting.
 
 ---
 
-## 🛠️ Rapid Deployment
+## 🛠️ Rapid Deployment & Replication
 
-Execute the all-in-one setup to transform your environment instantly:
+### Option A: Standard Script Setup
+Install the hardened scripts and HUD on your existing Debian environment:
 
 ```bash
-git clone https://github.com/Ruusian05/Pro-Termux-Harden
+git clone https://github.com/Ruusian5/Pro-Termux-Harden
 cd Pro-Termux-Harden
 bash setup.sh
 ```
+
+### Option B: Full System Backup/Restore
+This repository supports full system replication. Use the built-in backup tool to move your entire setup to another device:
+
+1.  **To Backup:** `bash backup.sh` (Creates snapshots in `/sdcard/ProTermux-Backups`).
+2.  **To Restore:** Simply extract `debian_chroot.tar.gz` to `/data/local/tmp/chrootDebian` and `termux_home.tar.gz` to your Termux HOME.
 
 ---
 
 ## 📟 Control HUD Shortcuts
 
-Once installed, use these instant aliases directly in your terminal:
-
 | Key | Action | Description |
 | :--- | :--- | :--- |
-| `1` | **LAUNCH** | Starts the XFCE4 Graphical Workstation. |
-| `2` | **RESET** | Terminates all Debian processes and cleans locks. |
-| `3` | **LINUX** | Drops you into an autonomous Debian CLI (Fixed TTY). |
-| `4` | **MAINT** | Runs silent, non-interactive package updates. |
-| `5` | **TOOLS** | Opens the Debian Dev Tool Installer menu. |
+| `1` | **LAUNCH** | Starts the XFCE4 Graphical Workstation (Fast Sync). |
+| `2` | **RESET** | Nuclear shutdown of all Debian/Graphics processes. |
+| `3` | **LINUX** | Drops you into an autonomous Debian CLI (Fixed TTY Bridge). |
+| `4` | **MAINT** | Silent, non-interactive system maintenance. |
+| `5` | **TOOLS** | Debian Dev Tool Installer (VS Code, Chromium, etc.). |
 | `cmds` | **HUD** | Opens the interactive Command Matrix Menu. |
 
 ---
 
-## 🤝 Community & Support
+## 🤝 Developed by Ruusian05
+🇷🇺 | *Redefining the boundaries of Mobile Linux.*
 
-Developed with ❤️ by **Ruusian05** 🇷🇺.
-
-Found a bug? Have a request for the v12.0 update? Open an **Issue** or submit a **Pull Request**.
-
----
-
-## 📜 License
-
-This project is licensed under the **MIT License**. Use it, break it, improve it.
+This project is open-source under the **MIT License**. We encourage forks, improvements, and community hardening.
 
 ---
-**[!] Warning:** *Modifying kernel-level bridges involves root access. Proceed with knowledge and caution.*
+**[!] Warning:** *Kernel-level bridging is a powerful tool. Proceed with caution.*
