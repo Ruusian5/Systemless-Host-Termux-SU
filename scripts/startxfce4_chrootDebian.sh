@@ -1,5 +1,5 @@
 #!/bin/bash
-# --- SUPER-LEVEL SESSION LAUNCHER (v0.3) ---
+# --- SUPER-LEVEL SESSION LAUNCHER (v14.1) ---
 DEBIANPATH="/data/local/tmp/chrootDebian"
 TERMUX_TMP="/data/data/com.termux/files/usr/tmp"
 

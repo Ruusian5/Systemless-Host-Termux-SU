@@ -1,5 +1,5 @@
 #!/bin/bash
-# --- MASTER CLI INITIALIZER (v0.3) ---
+# --- MASTER CLI INITIALIZER (v13.7) ---
 
 export XDG_RUNTIME_DIR=/run/user/1000
 export PULSE_SERVER=tcp:127.0.0.1:4713

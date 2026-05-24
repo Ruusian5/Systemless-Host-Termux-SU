@@ -1,0 +1,13 @@
+#!/bin/bash
+export DISPLAY=:0
+echo "Resetting XFCE Panel to Modern Express Default..."
+xfce4-panel -q
+xfconf-query -c xfce4-panel -p / -rR 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-1/plugin-ids -n -t int -s 1 -t int -s 2 -t int -s 3 -t int -s 4 -t int -s 5
+xfconf-query -c xfce4-panel -p /plugins/plugin-1 -n -t string -s "whiskermenu"
+xfconf-query -c xfce4-panel -p /plugins/plugin-2 -n -t string -s "tasklist"
+xfconf-query -c xfce4-panel -p /plugins/plugin-3 -n -t string -s "separator"
+xfconf-query -c xfce4-panel -p /plugins/plugin-3/expand -n -t bool -s true
+xfconf-query -c xfce4-panel -p /plugins/plugin-4 -n -t string -s "pulseaudio"
+xfconf-query -c xfce4-panel -p /plugins/plugin-5 -n -t string -s "clock"
+xfce4-panel &

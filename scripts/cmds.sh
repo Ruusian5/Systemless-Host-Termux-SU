@@ -1,5 +1,5 @@
 #!/bin/bash
-# --- OS MISSION CONTROL v0.3 (NEON TUI ALT-SCREEN) ---
+# --- OS MISSION CONTROL v15.3 (NEON TUI ALT-SCREEN) ---
 # High-Performance Interactive Workstation Controller
 
 # 1. THEME & COLORS
@@ -15,7 +15,7 @@ NC='\e[0m'
 
 DEBIANPATH="/data/local/tmp/chrootDebian"
 SELECTED=0
-OPTIONS=("LAUNCH WORKSTATION" "RESET KERNEL BRIDGE" "ENTER LINUX CLI" "DEBIAN MAINTENANCE" "BUILD CUSTOM DRIVER" "EXIT MISSION CONTROL")
+OPTIONS=("LAUNCH WORKSTATION" "GPU DIAGNOSTIC" "SYSTEM REPAIR" "ENTER LINUX CLI" "RESET KERNEL BRIDGE" "DEBIAN MAINTENANCE" "EXIT MISSION CONTROL")
 
 # 2. DATA VISUALIZATION ENGINE
 draw_bar() {
@@ -66,6 +66,10 @@ get_stats() {
 
     if [ -c "/dev/kgsl-3d0" ]; then
         ST_GPU="${C_ORANGE}ADRENO-640${NC}"
+        # Check for the VK_KHR_display bug specifically
+        if su -c "chroot $DEBIANPATH /usr/bin/vulkaninfo --summary 2>&1" | grep -q "I can't KHR_display" 2>/dev/null; then
+             ST_GPU="${C_ORANGE}A640 (${C_RED}VK-BUG${C_ORANGE})${NC}"
+        fi
     else
         ST_GPU="${C_RED}NO-HW${NC}"
     fi
@@ -76,7 +80,7 @@ render() {
     # Move cursor to home and clear to bottom
     printf "\e[H\e[2J"
     get_stats
-    echo -e "${C_ACCENT}${C_BOLD} ⚡ PRO-TERMUX HARDEN v0.3 ${NC} ${C_DIM}| SUPER-LEVEL OS ENGINE${NC}"
+    echo -e "${C_ACCENT}${C_BOLD} ⚡ PRO-TERMUX HARDEN v15.3 ${NC} ${C_DIM}| SUPER-LEVEL OS ENGINE${NC}"
     echo -e "${C_DIM} ─────────────────────────────────────────────────────────────${NC}"
     
     # Stats Row
@@ -110,24 +114,29 @@ execute_selection() {
             bash ~/startxfce4_chrootDebian.sh || (echo -e "${C_RED}Launch Failed.${NC}"; read -n 1)
             ;;
         1) 
+            bash ~/gpu-check.sh
+            echo -e "\n${C_GRAY}Press any key to return...${NC}"; read -n 1
+            ;;
+        2) 
+            bash ~/repair.sh
+            echo -e "\n${C_GRAY}Press any key to return...${NC}"; read -n 1
+            ;;
+        3) 
+            bash ~/mount-debian.sh
+            su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/local/bin/v3-cli.sh" 
+            ;;
+        4) 
             echo -e "\n${C_RED}[System] Resetting Kernel Bridges...${NC}"
             bash ~/stop-debian.sh && bash ~/mount-debian.sh 
             sleep 1
             ;;
-        2) 
-            bash ~/mount-debian.sh
-            su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/local/bin/v3-cli.sh" 
-            ;;
-        3) 
+        5) 
             bash ~/mount-debian.sh
             echo -e "\n${C_GREEN}[System] Running Infrastructure Maintenance...${NC}"
             su -c "chroot $DEBIANPATH /usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin apt update && apt upgrade -y"
             echo -e "\n${C_GREEN}Finished. Press Enter...${NC}"; read
             ;;
-        4) 
-            bash ~/build-custom-mesa.sh 
-            ;;
-        5) 
+        6) 
             exit 0 
             ;;
     esac
@@ -141,7 +150,7 @@ execute_selection() {
 # 5. INPUT HANDLER (Loop)
 if [ "$1" == "--once" ]; then
     get_stats
-    echo -e "${C_ACCENT}${C_BOLD} ⚡ PRO-TERMUX HARDEN v0.3 ${NC} ${C_DIM}| SUPER-LEVEL OS ENGINE${NC}"
+    echo -e "${C_ACCENT}${C_BOLD} ⚡ PRO-TERMUX HARDEN v15.3 ${NC} ${C_DIM}| SUPER-LEVEL OS ENGINE${NC}"
     echo -e "${C_DIM} ─────────────────────────────────────────────────────────────${NC}"
     printf "  ${C_BOLD}CPU${NC}  %-25s  ${C_BOLD}MEM${NC}  %s\n" "$(draw_bar $CPU_PERC)" "$(draw_bar $MEM_PERC)"
     echo -e "  ${C_GRAY}TEMP:${NC} $TEMP  ${C_GRAY}DEBIAN:${NC} $ST_DEB  ${C_GRAY}X11:${NC} $ST_X11  ${C_GRAY}GPU:${NC} $ST_GPU"

@@ -1,0 +1,8 @@
+#!/bin/bash
+export DISPLAY=:0
+xfconf-query -c xsettings -p /Net/ThemeName -n -t string -s "Arc-Dark"
+xfconf-query -c xsettings -p /Net/IconThemeName -n -t string -s "Adwaita"
+xfconf-query -c xfwm4 -p /general/theme -n -t string -s "Arc-Dark"
+xfconf-query -c xfwm4 -p /general/title_alignment -n -t string -s "center"
+xfconf-query -c xfce4-panel -p /panels/panel-1/size -n -t int -s 32
+echo "Visuals set to Arc-Dark."
