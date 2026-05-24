@@ -51,6 +51,10 @@ get_stats() {
         TEMP="N/A"
     fi
 
+    # CPU Governor
+    GOV=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null)
+    [ -z "$GOV" ] && GOV="N/A"
+
     # Precise Status Detection
     if grep -q "$DEBIANPATH" /proc/mounts 2>/dev/null; then
         ST_DEB="${C_GREEN}CONNECTED${NC}"
@@ -86,7 +90,7 @@ render() {
     # Stats Row
     printf "  ${C_BOLD}CPU${NC}  %-25s  ${C_BOLD}MEM${NC}  %s\n" "$(draw_bar $CPU_PERC)" "$(draw_bar $MEM_PERC)"
     echo ""
-    echo -e "  ${C_GRAY}TEMP:${NC} $TEMP  ${C_GRAY}DEBIAN:${NC} $ST_DEB  ${C_GRAY}X11:${NC} $ST_X11  ${C_GRAY}GPU:${NC} $ST_GPU"
+    echo -e "  ${C_GRAY}TEMP:${NC} $TEMP  ${C_GRAY}GOV:${NC} ${C_CYAN}$GOV${NC}  ${C_GRAY}DEBIAN:${NC} $ST_DEB  ${C_GRAY}X11:${NC} $ST_X11  ${C_GRAY}GPU:${NC} $ST_GPU"
     echo -e "${C_DIM} ─────────────────────────────────────────────────────────────${NC}"
     echo ""
 
@@ -153,7 +157,7 @@ if [ "$1" == "--once" ]; then
     echo -e "${C_ACCENT}${C_BOLD} ⚡ PRO-TERMUX HARDEN v15.3 ${NC} ${C_DIM}| SUPER-LEVEL OS ENGINE${NC}"
     echo -e "${C_DIM} ─────────────────────────────────────────────────────────────${NC}"
     printf "  ${C_BOLD}CPU${NC}  %-25s  ${C_BOLD}MEM${NC}  %s\n" "$(draw_bar $CPU_PERC)" "$(draw_bar $MEM_PERC)"
-    echo -e "  ${C_GRAY}TEMP:${NC} $TEMP  ${C_GRAY}DEBIAN:${NC} $ST_DEB  ${C_GRAY}X11:${NC} $ST_X11  ${C_GRAY}GPU:${NC} $ST_GPU"
+    echo -e "  ${C_GRAY}TEMP:${NC} $TEMP  ${C_GRAY}GOV:${NC} ${C_CYAN}$GOV${NC}  ${C_GRAY}DEBIAN:${NC} $ST_DEB  ${C_GRAY}X11:${NC} $ST_X11  ${C_GRAY}GPU:${NC} $ST_GPU"
     echo -e "${C_DIM} ─────────────────────────────────────────────────────────────${NC}"
     exit 0
 fi

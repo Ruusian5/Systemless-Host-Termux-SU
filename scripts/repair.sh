@@ -31,16 +31,26 @@ else
     echo -e "  [✓] No stale X11 locks found."
 fi
 
-# 3. Storage Optimization
-echo -e "\n${C_BOLD}[3/3] Optimizing Storage (fstrim)...${NC}"
+# 3. Storage & Kernel Optimization
+echo -e "\n${C_BOLD}[3/4] Optimizing Storage & Kernel...${NC}"
 if su -c "busybox fstrim -v /data"; then
     echo -e "  [✓] /data partition trimmed."
 else
     echo -e "  [!] fstrim failed or not supported."
 fi
 
+# Apply Swappiness fix
+if su -c "echo 10 > /proc/sys/vm/swappiness"; then
+    echo -e "  [✓] Swappiness set to 10."
+fi
+
+# Apply CPU Governor fix
+if su -c "for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done"; then
+    echo -e "  [✓] CPU Governor set to performance."
+fi
+
 # 4. Log Cleanup
-echo -e "\n${C_BOLD}[Bonus] Cleaning Large Logs...${NC}"
+echo -e "\n${C_BOLD}[4/4] Cleaning Large Logs...${NC}"
 find . -name "*.log" -size +10M -exec truncate -s 0 {} \;
 echo -e "  [✓] Truncated logs larger than 10MB."
 
