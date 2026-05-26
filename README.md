@@ -23,13 +23,21 @@ When combining `Zink` + `Turnip` (Vulkan) hardware acceleration with Termux:X11,
 ### 5. Hardware Acceleration Pipeline (`99-hardware-acceleration.sh`)
 - Exposes raw Vulkan and OpenGL capabilities to the chroot using Mesa `Zink` and the `Turnip` KGSL driver for Adreno GPUs (e.g., Adreno 640).
 
-## 🛠️ Usage
+## 🛠️ Installation
+
+Set up the entire environment (Termux packages, dashboard scripts, kernel fixes, and Debian guest hardening) with a single command:
+
+```bash
+pkg install git -y && git clone https://github.com/Ruusian5/Systemless-Host-Termux-SU.git && cd Systemless-Host-Termux-SU && bash install.sh
+```
+
+## 🖥️ Usage
 
 **Launch the Interactive Dashboard:**
 ```bash
-bash ~/cmds.sh
+agy
 ```
-*(Optionally aliased as `agy` in your `.bashrc`)*
+*(After restart, the `agy` command will be available as a shortcut to `cmds.sh`)*
 
 **Manual Start/Stop:**
 - Start: `bash ~/startxfce4_chrootDebian.sh`
