@@ -1,69 +1,36 @@
-# 🚀 Pro-Termux-Harden (v0.3)
-### *Advanced Hardware-Accelerated Linux Workstation for Android*
+# Systemless-Host-Termux-SU (Pro Workstation Edition)
 
-Welcome to the definitive Debian chroot environment for Termux. This project transforms your Android phone into a professional, desktop-grade workstation with full Adreno GPU support, low-latency audio, and professional TTY emulation.
+A high-performance, hardware-accelerated Debian chroot environment for Android/Termux, optimized for absolute stability and raw GPU access.
 
----
+## 🚀 Core Architecture & Recent Upgrades (v15.x)
 
-## 🌟 Key Features
-- **Universal Clipboard Sync:** Seamlessly copy and paste text between your Android host and the Linux X11 session.
-- **Legacy Drawing Patch:** Fixes the "Blank GUI" issue on older kernels by forcing Termux-X11 compatibility mode while preserving Zink acceleration for applications.
-- **Neon Alt-Screen TUI:** A high-performance, interactive dashboard for system management that uses a flicker-free alternate screen buffer.
-- **Mesa 26.0 (Sid) Stack:** Cutting-edge graphics pipeline with Zink + Turnip (KGSL) support.
-- **Pro TTY Emulation:** Flawless Linux terminal experience with full job control and correct PTY allocation via Python.
-- **Synchronized Audio:** Low-latency PulseAudio bridging between Termux and Debian.
+This project bridges the gap between Android's isolated environment and a full Linux workstation. Recent architectural overhauls by a senior developer have resolved critical kernel limitations and state management issues.
 
-## 🚀 Installation & Restoration
-### 1. Prerequisites
-- **Rooted Android Device** (Required for hardware node mounting).
-- **Termux** & **Termux-X11** App installed.
-- **Aarch64 Architecture** (Snapdragon 845 or newer recommended).
+### 1. Kernel Bug Bypass & Memory Fix (`fix_mmap.so`)
+Older custom Android kernels (e.g., Linux 4.14) contain a fatal bug in the `close_range` system call, causing modern Debian processes to get permanently stuck in uninterruptible kernel loops (100% CPU lockups).
+- **The Fix:** A custom C library (`fix_mmap.c`) is injected globally via `LD_PRELOAD`. It intercepts `close_range` and safely returns `ENOSYS`, forcing glibc to fallback to safe, manual file descriptor closures. It also intercepts `mmap` calls exceeding the 39-bit address limit, preventing immediate segmentation faults.
 
-### 2. Automatic Setup
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/Ruusian5/Systemless-Host-Termux-SU.git
-   cd Systemless-Host-Termux-SU
-   ```
-2. Run the installer:
-   ```bash
-   chmod +x setup.sh
-   ./setup.sh
-   ```
+### 2. D-Bus & Compositing Race Condition Fix (`user-session.sh`)
+When combining `Zink` + `Turnip` (Vulkan) hardware acceleration with Termux:X11, attempting to use the XFCE compositor causes a DRI3 negotiation failure, resulting in a black screen.
+- **The Fix:** `user-session.sh` strictly initializes the D-Bus daemon (`dbus-launch --sh-syntax`) *before* executing `xfconf-query`. This ensures compositing is successfully disabled at the system level before `xfwm4` starts, granting full 2D stability while retaining 3D hardware acceleration for applications.
 
-### 3. Restoring the Master Snapshot
-To get the full Debian OS, you must download the system snapshot:
-1. Go to the [Releases](https://github.com/Ruusian5/Systemless-Host-Termux-SU/releases) page.
-2. Download all `debian_v13_snapshot.tar.gz.part_*` files.
-3. Move them to `/sdcard/ProTermux-Backups/`.
-4. Recombine and restore:
-   ```bash
-   cat /sdcard/ProTermux-Backups/debian_v13_snapshot.tar.gz.part_* > /sdcard/ProTermux-Backups/debian_chroot.tar.gz
-   bash ~/restore-env.sh
-   ```
+### 3. Idempotent State Management (`mount-debian.sh`)
+- **The Fix:** The mount script no longer relies on a single point of failure (e.g., checking if `/dev` exists). Instead, it uses custom `domount` and `dotmpfs` functions to read `/proc/mounts` line-by-line, mounting only the specific bridges that are missing. This guarantees a safe, idempotent execution that recovers perfectly from partial crashes.
 
----
+### 4. Graceful Process Lifecycle (`stop-debian.sh`)
+- **The Fix:** Shutdowns now follow strict POSIX compliance. `SIGTERM` (-15) is issued to all GUI and DBus processes, followed by a `sleep`, allowing applications to cleanly release sockets and locks. `SIGKILL` (-9) is only used as a final fallback. Additionally, `am force-stop com.termux.x11` is invoked to destroy the Android app's background state, completely preventing stale socket connection errors (black screens) on the next launch.
 
-## 🎮 Operations Manual
-Use the `cmds` alias to launch the Neon TUI, or use direct shortcuts from your terminal:
+### 5. Hardware Acceleration Pipeline (`99-hardware-acceleration.sh`)
+- Exposes raw Vulkan and OpenGL capabilities to the chroot using Mesa `Zink` and the `Turnip` KGSL driver for Adreno GPUs (e.g., Adreno 640).
 
-| Shortcut | Command | Action |
-| :--- | :--- | :--- |
-| `1` | **Launch Desktop** | Starts XFCE4 with high-speed GPU compositing. |
-| `3` | **Linux CLI** | Drops you into a professional, bus-connected Linux shell. |
-| `4` | **Maintenance** | Auto-update Debian and clean system caches. |
-| `stop` | **Kill System** | Safely unmounts hardware nodes and clears session locks. |
-| `cmds` | **Mission Control** | Opens the interactive HUD menu. |
+## 🛠️ Usage
 
----
+**Launch the Interactive Dashboard:**
+```bash
+bash ~/cmds.sh
+```
+*(Optionally aliased as `agy` in your `.bashrc`)*
 
-## 🔧 Technical Pipeline (The "Bare Metal" Magic)
-- **GPU:** Uses the **Zink** driver to translate OpenGL to Vulkan, which then speaks directly to the **Adreno 640** via the **Turnip KGSL** bridge.
-- **Audio:** PulsAudio is bridged via TCP (localhost) to ensure zero-lag synchronization during video playback.
-- **Clipboard:** A custom background daemon polls `termux-api` and `xclip` to keep the host and chroot clipboards perfectly synced.
-- **Security:** The system is **anonymized**. No API keys, personal emails, or credentials are included in this backup.
-
----
-
-## 📜 License
-MIT License. Optimized for the mobile Linux community.
+**Manual Start/Stop:**
+- Start: `bash ~/startxfce4_chrootDebian.sh`
+- Stop: `bash ~/stop-debian.sh`

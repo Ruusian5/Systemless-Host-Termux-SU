@@ -21,7 +21,7 @@ virgl_test_server_android --multi-clients > /dev/null 2>&1 &
 
 echo -e "\e[1;32m[+] Launching X11 Display Server...\e[0m"
 am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
-XDG_RUNTIME_DIR=${TERMUX_TMP} termux-x11 :0 -ac > "$HOME/x11_server.log" 2>&1 &
+XDG_RUNTIME_DIR=${TERMUX_TMP} termux-x11 :0 -ac -legacy-drawing -disable-dri3 > "$HOME/x11_server.log" 2>&1 &
 
 echo -e "\e[1;32m[+] Launching Universal Clipboard Sync...\e[0m"
 pkill -f clipboard-sync.sh 2>/dev/null
