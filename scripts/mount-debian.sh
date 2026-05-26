@@ -1,43 +1,56 @@
 #!/bin/bash
-# --- ENTERPRISE KERNEL BRIDGE (V13.7) ---
-DEBIANPATH="/data/local/tmp/chrootDebian"
-BUSYBOX="/data/data/com.termux/files/usr/bin/busybox"
+# --- ENTERPRISE KERNEL BRIDGE (V13.8) ---
+# Refactored for strictly idempotent state management
 
-if grep -q -w "$DEBIANPATH/dev" /proc/mounts; then exit 0; fi
+DEBIANPATH="/data/local/tmp/chrootDebian"
 
 echo -e "\e[1;33m[~] Synchronizing Hardware Bridges...\e[0m"
 
-# 1. Ensure internal directories exist
-su -c "mkdir -p $DEBIANPATH/dev/shm $DEBIANPATH/dev/pts $DEBIANPATH/tmp $DEBIANPATH/run $DEBIANPATH/var/lock"
-
-# 2. Batch Mount with Fallbacks
 su -c "
-    mount --bind /dev $DEBIANPATH/dev
+    # Helper function for idempotent bind mounts
+    domount() {
+        if ! grep -q -w \"\$2\" /proc/mounts; then
+            mount --bind \"\$1\" \"\$2\"
+        fi
+    }
+    
+    # Helper function for idempotent tmpfs mounts
+    dotmpfs() {
+        if ! grep -q -w \"\$2\" /proc/mounts; then
+            mount -t tmpfs tmpfs \"\$2\" -o \"\$3\"
+        fi
+    }
+
+    # Ensure internal directories exist
+    mkdir -p $DEBIANPATH/dev/shm $DEBIANPATH/dev/pts $DEBIANPATH/tmp $DEBIANPATH/run $DEBIANPATH/var/lock
+
+    # Batch Mount (Idempotent)
+    domount /dev $DEBIANPATH/dev
     
     # Create missing nodes in the newly mounted /dev
-    mkdir -p $DEBIANPATH/dev/shm
-    mkdir -p $DEBIANPATH/dev/pts
+    mkdir -p $DEBIANPATH/dev/shm $DEBIANPATH/dev/pts
     
-    mount --bind /proc $DEBIANPATH/proc
-    mount --bind /sys $DEBIANPATH/sys
-    mount --bind /dev/pts $DEBIANPATH/dev/pts
-    mount --bind /system $DEBIANPATH/system
-    mount --bind /vendor $DEBIANPATH/vendor
-    mount --bind /apex $DEBIANPATH/apex
-    mount --bind /linkerconfig $DEBIANPATH/linkerconfig
-    mount --bind /sdcard $DEBIANPATH/sdcard
-    mount --bind /data/data/com.termux/files/usr $DEBIANPATH/data/data/com.termux/files/usr
-    mount --bind /data/data/com.termux/files/usr/tmp $DEBIANPATH/tmp
+    domount /proc $DEBIANPATH/proc
+    domount /sys $DEBIANPATH/sys
+    domount /dev/pts $DEBIANPATH/dev/pts
+    domount /system $DEBIANPATH/system
+    domount /vendor $DEBIANPATH/vendor
+    domount /apex $DEBIANPATH/apex
+    domount /linkerconfig $DEBIANPATH/linkerconfig
+    domount /sdcard $DEBIANPATH/sdcard
+    domount /data/data/com.termux/files/usr $DEBIANPATH/data/data/com.termux/files/usr
+    domount /data/data/com.termux/files/usr/tmp $DEBIANPATH/tmp
 
-    # Fix: Use tmpfs for shm if host node is missing (Common on Android)
-    mount -t tmpfs tmpfs $DEBIANPATH/dev/shm -o rw,nosuid,nodev,noatime
-    
-    mount -t tmpfs tmpfs $DEBIANPATH/run -o rw,mode=1777,noatime
-    mount -t tmpfs tmpfs $DEBIANPATH/var/lock -o rw,mode=1777,noatime
+    # Mount tmpfs components
+    dotmpfs tmpfs $DEBIANPATH/dev/shm rw,nosuid,nodev,noatime
+    dotmpfs tmpfs $DEBIANPATH/run rw,mode=1777,noatime
+    dotmpfs tmpfs $DEBIANPATH/var/lock rw,mode=1777,noatime
 
+    # Permissions
     mkdir -p $DEBIANPATH/run/user/1000
     chown 1000:1000 $DEBIANPATH/run/user/1000
     chmod 700 $DEBIANPATH/run/user/1000
-    chmod 666 /dev/kgsl-3d0 /dev/dri/* /dev/video* /dev/ion
+    chmod 666 /dev/kgsl-3d0 /dev/dri/* /dev/video* /dev/ion 2>/dev/null || true
 "
-echo -e "\e[1;32m[✓] All Bridges Verified.\e[0m"
+
+echo -e "\e[1;32m[✓] All Bridges Verified and Mounted.\e[0m"

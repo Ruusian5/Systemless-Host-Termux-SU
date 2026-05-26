@@ -15,9 +15,13 @@ rm -rf "$TERMUX_TMP"/.X0-lock "$TERMUX_TMP"/.X11-unix/X0 2>/dev/null
 echo -e "\e[1;32m[+] Starting High-Speed Audio...\e[0m"
 pulseaudio --start --exit-idle-time=-1 2>/dev/null
 
+echo -e "\e[1;32m[+] Starting GPU Bridge (VirGL)...\e[0m"
+pkill -f virgl_test_server 2>/dev/null
+virgl_test_server_android --multi-clients > /dev/null 2>&1 &
+
 echo -e "\e[1;32m[+] Launching X11 Display Server...\e[0m"
 am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
-XDG_RUNTIME_DIR=${TERMUX_TMP} termux-x11 :0 -ac -legacy-drawing > "$HOME/x11_server.log" 2>&1 &
+XDG_RUNTIME_DIR=${TERMUX_TMP} termux-x11 :0 -ac > "$HOME/x11_server.log" 2>&1 &
 
 echo -e "\e[1;32m[+] Launching Universal Clipboard Sync...\e[0m"
 pkill -f clipboard-sync.sh 2>/dev/null

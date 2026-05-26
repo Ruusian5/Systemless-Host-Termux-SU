@@ -4,7 +4,9 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export TMPDIR=/tmp
 
 # 1. INITIALIZE HARDWARE
-[ -f /etc/profile.d/99-hardware-acceleration.sh ] && . /etc/profile.d/99-hardware-acceleration.sh
+if [ -f /etc/profile.d/99-hardware-acceleration.sh ]; then
+    . /etc/profile.d/99-hardware-acceleration.sh
+fi
 
 # 2. START DBUS
 if [ ! -S /run/dbus/system_bus_socket ]; then
