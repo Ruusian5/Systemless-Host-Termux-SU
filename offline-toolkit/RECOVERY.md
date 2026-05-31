@@ -21,7 +21,7 @@ If the Debian system is completely non-bootable or deeply corrupted:
    cd ~/Systemless-Host-Termux-SU/offline-toolkit
    ./restore.sh debian-rootfs.tar.zst
    ```
-   **Note:** This wipes the existing `/data/local/tmp/chrootDebian`. Make sure you have backed up your `/home/ruusian` directory if possible!
+   **Note:** This wipes the existing `/data/local/tmp/chrootDebian`. Make sure you have backed up your `/home/Ruusian5` directory if possible!
 
 ## Scenario 4: Black Screen on Boot (GPU Driver crash)
 If the `Zink` driver is causing a total system crash during XFCE startup:

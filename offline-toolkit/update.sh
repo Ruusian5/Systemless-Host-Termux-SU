@@ -27,7 +27,7 @@ if [ ! -f "$ARCHIVE_PATH" ]; then
 fi
 
 echo -e "${C_ORANGE}[!] WARNING: This will overwrite system binaries in the Debian guest.${NC}"
-echo -e "Your home directory (/home/ruusian) will be PRESERVED."
+echo -e "Your home directory (/home/Ruusian5) will be PRESERVED."
 read -p "Continue with update? (y/N) " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then

@@ -21,4 +21,4 @@ chown 1000:1000 /run/user/1000
 chmod 700 /run/user/1000
 
 # 4. LAUNCH SESSION
-exec /usr/bin/su - ruusian -c "/usr/local/bin/user-session.sh"
+exec /usr/bin/su - Ruusian5 -c "/usr/local/bin/user-session.sh"

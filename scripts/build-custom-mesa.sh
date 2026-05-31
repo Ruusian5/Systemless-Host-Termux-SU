@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/data/data/com.termux/files/usr/bin/bash
 # --- CUSTOM MESA DRIVER BUILDER (TURNIP/KGSL) ---
 # This script compiles the Mesa graphics stack directly from source code
 # on your specific hardware. This is the closest equivalent to "building

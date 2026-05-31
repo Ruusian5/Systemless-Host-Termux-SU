@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/data/data/com.termux/files/usr/bin/bash
 # --- ENTERPRISE SHUTDOWN SCRIPT (V0.1) ---
 # Refactored for graceful process lifecycle management
 

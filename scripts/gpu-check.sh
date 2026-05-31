@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/data/data/com.termux/files/usr/bin/bash
 # --- GPU HARDWARE ACCELERATION DIAGNOSTIC v0.1 ---
 C_BOLD='\e[1m'
 C_CYAN='\e[38;5;39m'

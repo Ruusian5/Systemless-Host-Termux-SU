@@ -6,7 +6,7 @@ export PULSE_SERVER=tcp:127.0.0.1:4713
 export DISPLAY=:0
 
 # Start user dbus session if missing
-if [ ! -S "/run/user/1000/bus" ] && ! pgrep -u ruusian dbus-daemon > /dev/null; then
+if [ ! -S "/run/user/1000/bus" ] && ! pgrep -u Ruusian5 dbus-daemon > /dev/null; then
     dbus-launch --sh-syntax --exit-with-session > /tmp/dbus-env
     [ -f /tmp/dbus-env ] && . /tmp/dbus-env
 fi

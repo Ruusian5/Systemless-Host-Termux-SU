@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/data/data/com.termux/files/usr/bin/bash
 # --- ROBUST CLIPBOARD SYNC DAEMON (v2.1) ---
 
 # Prevent multiple instances
