@@ -1,5 +1,5 @@
 # ⚡ Pro Workstation Edition v0.1 (Hardened)
-### BY RUUSIAN
+### BY Ruusian5
 
 A high-performance, hardware-accelerated Debian environment for Android via Termux. This project transforms your rooted device into a production-grade Linux workstation with full GPU acceleration, integrated audio, and universal clipboard sync.
 
@@ -77,4 +77,4 @@ cd Systemless-Host-Termux-SU/offline-toolkit
 
 For Disaster Recovery procedures, see [offline-toolkit/RECOVERY.md](offline-toolkit/RECOVERY.md). For migration guides, check [offline-toolkit/MIGRATION.md](offline-toolkit/MIGRATION.md).
 
-**VERSION 0.1 | HARDENED | BY RUUSIAN**
+**VERSION 0.1 | HARDENED | BY Ruusian5**
