@@ -1,0 +1,6 @@
+alias agy='bash ~/cmds.sh'
+alias res='bash ~/res.sh'
+alias sd='bash ~/termux-system-shutdown.sh'
+alias fix='bash ~/repair.sh'
+alias gpu='bash ~/gpu-check.sh'
+alias deb='bash ~/cli-bridge.sh'

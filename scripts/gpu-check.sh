@@ -1,5 +1,5 @@
 #!/bin/bash
-# --- GPU HARDWARE ACCELERATION DIAGNOSTIC v1.0 ---
+# --- GPU HARDWARE ACCELERATION DIAGNOSTIC v0.1 ---
 C_BOLD='\e[1m'
 C_CYAN='\e[38;5;39m'
 C_GREEN='\e[38;5;82m'
@@ -17,16 +17,22 @@ else
 fi
 
 # 2. Check Vulkan ICD
-ICD_PATH="/data/data/com.termux/files/home/drivers/freedreno_icd.aarch64.json"
-if [ -f "$ICD_PATH" ]; then
-    echo -e "  [${C_GREEN}✓${NC}] Turnip ICD Config: Found"
+CHROOT_ICD="/data/local/tmp/chrootDebian/usr/share/vulkan/icd.d/freedreno_icd.aarch64.json"
+if su -c "test -f $CHROOT_ICD"; then
+    echo -e "  [${C_GREEN}✓${NC}] Turnip ICD Config: Found (Guest OS)"
+    ICD_PATH="/usr/share/vulkan/icd.d/freedreno_icd.aarch64.json"
 else
-    echo -e "  [${C_RED}✗${NC}] Turnip ICD Config: Missing in ~/drivers/"
+    ICD_PATH="/data/data/com.termux/files/home/drivers/freedreno_icd.aarch64.json"
+    if [ -f "$ICD_PATH" ]; then
+        echo -e "  [${C_GREEN}✓${NC}] Turnip ICD Config: Found (Host drivers/)"
+    else
+        echo -e "  [${C_RED}✗${NC}] Turnip ICD Config: Missing"
+    fi
 fi
 
 # 3. Check for VK_KHR_display bug inside chroot
 echo -e "\n${C_BOLD}${C_CYAN}[Vulkan Check]${NC} Testing Physical Device Enumeration..."
-OUTPUT=$(su -c "chroot /data/local/tmp/chrootDebian /usr/bin/env VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/freedreno_icd.aarch64.json /usr/bin/vulkaninfo --summary 2>&1")
+OUTPUT=$(su -c "chroot /data/local/tmp/chrootDebian /usr/bin/env VK_ICD_FILENAMES=$ICD_PATH TU_DEBUG=kgsl /usr/bin/vulkaninfo --summary 2>&1")
 
 if echo "$OUTPUT" | grep -q "I can't KHR_display"; then
     echo -e "  [${C_ORANGE}!${NC}] ${C_BOLD}VK_KHR_display Bug Detected${NC}"

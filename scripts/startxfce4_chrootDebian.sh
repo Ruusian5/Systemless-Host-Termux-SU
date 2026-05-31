@@ -1,5 +1,5 @@
 #!/bin/bash
-# --- SUPER-LEVEL SESSION LAUNCHER (v14.1) ---
+# --- SUPER-LEVEL SESSION LAUNCHER (v0.1) ---
 DEBIANPATH="/data/local/tmp/chrootDebian"
 TERMUX_TMP="/data/data/com.termux/files/usr/tmp"
 
@@ -13,7 +13,7 @@ rm -rf "$TERMUX_TMP"/.X0-lock "$TERMUX_TMP"/.X11-unix/X0 2>/dev/null
 
 # 2. CORE ENGINES
 echo -e "\e[1;32m[+] Starting High-Speed Audio...\e[0m"
-pulseaudio --start --exit-idle-time=-1 2>/dev/null
+pulseaudio --start --exit-idle-time=-1 --load="module-native-protocol-tcp port=4713 auth-anonymous=1 auth-ip-acl=127.0.0.1" 2>/dev/null
 
 echo -e "\e[1;32m[+] Starting GPU Bridge (VirGL)...\e[0m"
 pkill -f virgl_test_server 2>/dev/null

@@ -1,44 +1,56 @@
-# Systemless-Host-Termux-SU (Pro Workstation Edition)
+# ⚡ Pro Workstation Edition v0.1 (Hardened)
+### BY RUUSIAN
 
-A high-performance, hardware-accelerated Debian chroot environment for Android/Termux, optimized for absolute stability and raw GPU access.
+A high-performance, hardware-accelerated Debian environment for Android via Termux. This project transforms your rooted device into a production-grade Linux workstation with full GPU acceleration, integrated audio, and universal clipboard sync.
 
-## 🚀 Core Architecture & Recent Upgrades (v15.x)
+---
 
-This project bridges the gap between Android's isolated environment and a full Linux workstation. Recent architectural overhauls by a senior developer have resolved critical kernel limitations and state management issues.
+## 🚀 Key Features
+*   **Hardware Acceleration**: Native Adreno GPU support via Turnip + Zink drivers (Mesa 26.1).
+*   **Enterprise Hardening**: Resolved Android SUID restrictions; idempotent kernel bridges.
+*   **Workstation Suite**: Pre-configured **Firefox ESR** (with uBlock Origin) and **VLC Media Player**.
+*   **Integrated Dev Stack**: Fully functional **Node.js**, **NPM**, **Curl**, and **APT** inside Debian.
+*   **Mission Control Dashboard**: Advanced TUI (`agy`) for system vitals and one-tap controls.
+*   **Universal Sync**: Shared clipboard and high-speed audio bridge between Android and Debian.
 
-### 1. Kernel Bug Bypass & Memory Fix (`fix_mmap.so`)
-Older custom Android kernels (e.g., Linux 4.14) contain a fatal bug in the `close_range` system call, causing modern Debian processes to get permanently stuck in uninterruptible kernel loops (100% CPU lockups).
-- **The Fix:** A custom C library (`fix_mmap.c`) is injected globally via `LD_PRELOAD`. It intercepts `close_range` and safely returns `ENOSYS`, forcing glibc to fallback to safe, manual file descriptor closures. It also intercepts `mmap` calls exceeding the 39-bit address limit, preventing immediate segmentation faults.
+---
 
-### 2. D-Bus & Compositing Race Condition Fix (`user-session.sh`)
-When combining `Zink` + `Turnip` (Vulkan) hardware acceleration with Termux:X11, attempting to use the XFCE compositor causes a DRI3 negotiation failure, resulting in a black screen.
-- **The Fix:** `user-session.sh` strictly initializes the D-Bus daemon (`dbus-launch --sh-syntax`) *before* executing `xfconf-query`. This ensures compositing is successfully disabled at the system level before `xfwm4` starts, granting full 2D stability while retaining 3D hardware acceleration for applications.
+## 🛠 Installation
 
-### 3. Idempotent State Management (`mount-debian.sh`)
-- **The Fix:** The mount script no longer relies on a single point of failure (e.g., checking if `/dev` exists). Instead, it uses custom `domount` and `dotmpfs` functions to read `/proc/mounts` line-by-line, mounting only the specific bridges that are missing. This guarantees a safe, idempotent execution that recovers perfectly from partial crashes.
+1.  **Extract your Debian Chroot** to `/data/local/tmp/chrootDebian`.
+2.  **Clone this Repo** into your Termux home.
+3.  **Run the Hardened Installer**:
+    ```bash
+    cd Systemless-Host-Termux-SU
+    bash install.sh
+    ```
+4.  **Launch Dashboard**:
+    ```bash
+    agy
+    ```
 
-### 4. Graceful Process Lifecycle (`stop-debian.sh`)
-- **The Fix:** Shutdowns now follow strict POSIX compliance. `SIGTERM` (-15) is issued to all GUI and DBus processes, followed by a `sleep`, allowing applications to cleanly release sockets and locks. `SIGKILL` (-9) is only used as a final fallback. Additionally, `am force-stop com.termux.x11` is invoked to destroy the Android app's background state, completely preventing stale socket connection errors (black screens) on the next launch.
+---
 
-### 5. Hardware Acceleration Pipeline (`99-hardware-acceleration.sh`)
-- Exposes raw Vulkan and OpenGL capabilities to the chroot using Mesa `Zink` and the `Turnip` KGSL driver for Adreno GPUs (e.g., Adreno 640).
+## 🎮 GPU Performance
+This project prioritizes **Zink + Turnip** for maximum OpenGL/Vulkan performance. 
+*   **Default Renderer**: `zink` (Adreno 640/KGSL).
+*   **Firefox Hooks**: Policy-driven hardware acceleration and sandbox bypasses for high-FPS browsing.
+*   **VLC Hooks**: Direct `gles2` output for smooth HD video playback.
 
-## 🛠️ Installation
+---
 
-Set up the entire environment (Termux packages, dashboard scripts, kernel fixes, and Debian guest hardening) with a single command:
+## 📂 Project Structure
+*   `scripts/cmds.sh`: The Mission Control Dashboard.
+*   `scripts/mount-debian.sh`: Enterprise kernel bridge with SUID remounting.
+*   `scripts/startxfce4_chrootDebian.sh`: Super-level session launcher.
+*   `scripts/repair.sh`: Deep-clean and system optimization utility.
+*   `configs/debian/`: Pre-configured environment hooks for the guest OS.
 
-```bash
-pkg install git -y && git clone https://github.com/Ruusian5/Systemless-Host-Termux-SU.git && cd Systemless-Host-Termux-SU && bash install.sh
-```
+---
 
-## 🖥️ Usage
+## 🛡 Security & Reliability
+*   **Continuous Uptime**: Designed for months of continuous operation without rebooting.
+*   **Idempotent Bridges**: Scripts detect existing mounts to prevent system locks.
+*   **Graceful Shutdown**: 2-stage termination (SIGTERM -> SIGKILL) to prevent zombie processes.
 
-**Launch the Interactive Dashboard:**
-```bash
-agy
-```
-*(After restart, the `agy` command will be available as a shortcut to `cmds.sh`)*
-
-**Manual Start/Stop:**
-- Start: `bash ~/startxfce4_chrootDebian.sh`
-- Stop: `bash ~/stop-debian.sh`
+**VERSION 0.1 | HARDENED | BY RUUSIAN**

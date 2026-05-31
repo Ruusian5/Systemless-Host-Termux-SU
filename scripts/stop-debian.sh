@@ -1,5 +1,5 @@
 #!/bin/bash
-# --- ENTERPRISE SHUTDOWN SCRIPT (V13.6) ---
+# --- ENTERPRISE SHUTDOWN SCRIPT (V0.1) ---
 # Refactored for graceful process lifecycle management
 
 DEBIANPATH="/data/local/tmp/chrootDebian"
