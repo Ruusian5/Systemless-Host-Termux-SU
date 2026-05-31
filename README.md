@@ -53,4 +53,28 @@ This project prioritizes **Zink + Turnip** for maximum OpenGL/Vulkan performance
 *   **Idempotent Bridges**: Scripts detect existing mounts to prevent system locks.
 *   **Graceful Shutdown**: 2-stage termination (SIGTERM -> SIGKILL) to prevent zombie processes.
 
+---
+
+## 📦 Offline Deployment System
+The **Systemless-Host-Termux-SU** project includes a full offline deployment toolkit. You can backup, restore, and migrate your workstation without an internet connection using pre-packaged ZSTD snapshots.
+
+### Creating a Snapshot
+```bash
+# Gracefully shutdown to unmount Android bridges safely
+bash ~/stop-debian.sh
+
+# Compress the entire workstation (Requires Root)
+su -c "/data/data/com.termux/files/usr/bin/tar -I '/data/data/com.termux/files/usr/bin/zstd -T0 -10' -cpf /sdcard/debian-rootfs.tar.zst -C /data/local/tmp chrootDebian"
+```
+
+### Restoring a Snapshot
+Use the bundled offline-toolkit to verify architecture, storage space, and checksums before deploying:
+```bash
+cd Systemless-Host-Termux-SU/offline-toolkit
+./verify.sh checksums.sha256
+./restore.sh /path/to/debian-rootfs.tar.zst
+```
+
+For Disaster Recovery procedures, see [offline-toolkit/RECOVERY.md](offline-toolkit/RECOVERY.md). For migration guides, check [offline-toolkit/MIGRATION.md](offline-toolkit/MIGRATION.md).
+
 **VERSION 0.1 | HARDENED | BY RUUSIAN**
