@@ -1,0 +1,1 @@
+# 🗺️ Roadmap ## v0.2 - Packaging and hardening - Offline bundle verification - GPU driver abstraction for Adreno 6xx/7xx - Automated test matrix in CI ## v0.3 - User migration tooling - Config backup/restore per user - Improved error messages in installers ## v1.0 - Release candidate hardening - Full documentation + signed releases - Security audit completion

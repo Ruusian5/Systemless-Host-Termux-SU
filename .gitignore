@@ -1,0 +1,45 @@
+# OS junk
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Termux local state
+.bash_history
+.clipboard.log
+.x11_server.log
+.dashboard_cache
+.qwen/**
+!.qwen/output-language.md
+
+# Backups & archives
+backups/**
+archives/**
+
+# Chroot + rootfs (never commit)
+/data/local/tmp/chrootDebian/**
+
+# Offline release artifacts (track only metadata)
+offline-release/*
+!offline-release/package-manifest.txt
+!offline-release/installed-packages.txt
+!offline-release/checksums.sha256
+
+# Build outputs
+build/**
+dist/**
+
+# Editor/IDE
+.idea/
+.vscode/
+*.iml
+
+# Secrets / credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*.env
+.secrets/**
+credentials/**
