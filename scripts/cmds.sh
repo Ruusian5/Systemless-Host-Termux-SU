@@ -6,15 +6,14 @@
 C_BOLD='\e[1m'
 C_ACCENT='\e[38;5;135m' # Neon Purple
 C_CYAN='\e[38;5;39m'   # Electric Cyan
-C_ORANGE='\e[38;5;208m' # Power Orange
-C_GREEN='\e[38;5;82m'   # Signal Green
-C_RED='\e[38;5;196m'    # Alert Red
-C_GRAY='\e[38;5;244m'   # UI Gray
+C_ORANGE='\e[38;5;208m'
+C_GREEN='\e[38;5;82m'
+C_RED='\e[38;5;196m'
+C_GRAY='\e[38;5;244m'
 C_DIM='\e[2m'
 NC='\e[0m'
 
 DEBIANPATH="/data/local/tmp/chrootDebian"
-termux-wake-lock 2>/dev/null
 SELECTED=0
 OPTIONS=(
     "LAUNCH WORKSTATION (GUI)" 
@@ -26,6 +25,7 @@ OPTIONS=(
     "POWER PROFILE: PERFORMANCE"
     "POWER PROFILE: COOLDOWN"
     "RESET KERNEL BRIDGES" 
+    "GPU STACK AUDIT & AUTO-FIX"
     "DEBIAN MAINTENANCE (UPDATE)"
     "EXIT MISSION CONTROL" 
     "FULL SYSTEM SHUTDOWN"
@@ -49,34 +49,27 @@ draw_bar() {
 }
 
 get_stats() {
-    # 1. CPU Logic (Weighted Load)
     CPU_RAW=$(uptime | awk -F'load average:' '{ print $2 }' | awk -F',' '{ print $1 }' | sed 's/ //g')
-    CPU_PERC=$(echo "$CPU_RAW * 12.5" | bc | cut -d. -f1)
+    CPU_PERC=$(echo "$CPU_RAW * 12.5" | bc | cut -d. -f1 2>/dev/null || echo 0)
     [[ ! "$CPU_PERC" =~ ^[0-9]+$ ]] && CPU_PERC=0
     [ "$CPU_PERC" -gt 100 ] && CPU_PERC=100
 
-    # 2. Memory Logic
     read -r MEM_PERC <<< $(free | awk '/Mem:/ { if($2>0) printf "%d", ($3*100)/$2; else print "0" }')
     
-    # 3. Battery Logic
     BATT_JSON=$(termux-battery-status 2>/dev/null)
     BATT_PERC=$(echo "$BATT_JSON" | grep -oEi '"percentage": [0-9]+' | awk '{print $2}')
     BATT_STAT=$(echo "$BATT_JSON" | grep -oEi '"status": "[^"]+"' | awk -F'"' '{print $4}')
     [ -z "$BATT_PERC" ] && BATT_PERC="0"
     
-    # 4. Temperature
     TEMP=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null)
     if [ -n "$TEMP" ]; then TEMP="$((TEMP/1000))°C"; else TEMP="N/A"; fi
 
-    # 5. Network
     IP_ADDR=$(ifconfig wlan0 2>/dev/null | grep 'inet ' | awk '{print $2}')
     [ -z "$IP_ADDR" ] && IP_ADDR="DISCONNECTED"
 
-    # 6. Storage
     STORAGE_PERC=$(df -h /sdcard | awk 'NR==2 {print $5}' | sed 's/%//')
     [ -z "$STORAGE_PERC" ] && STORAGE_PERC="0"
 
-    # 7. Subsystem Status
     grep -q "$DEBIANPATH" /proc/mounts 2>/dev/null && ST_DEB="${C_GREEN}CONNECTED${NC}" || ST_DEB="${C_RED}DETACHED${NC}"
     grep -q "$DEBIANPATH/sdcard" /proc/mounts 2>/dev/null && ST_SD="${C_GREEN}LINKED${NC}" || ST_SD="${C_RED}MISSING${NC}"
     [ -S "/data/data/com.termux/files/usr/tmp/.X11-unix/X0" ] && pgrep -f "termux-x11" >/dev/null && ST_X11="${C_GREEN}ACTIVE${NC}" || ST_X11="${C_RED}IDLE${NC}"
@@ -87,7 +80,6 @@ get_stats() {
     command -v termux-battery-status >/dev/null && ST_API="${C_GREEN}READY${NC}" || ST_API="${C_RED}ERR${NC}"
 }
 
-# 3. RENDER ENGINE
 render() {
     printf "\e[H\e[2J"
     get_stats
@@ -120,7 +112,7 @@ render() {
     done
     
     echo ""
-    echo -e "  ${C_DIM}KEYS: [1-9,0] RUN | [S] SHUTDOWN | [X/Q] EXIT | [↑↓] NAV${NC}"
+    echo -e "  ${C_DIM}KEYS: [1-9,G,0] RUN | [S] SHUTDOWN | [X/Q] EXIT | [↑↓] NAV${NC}"
 }
 
 execute_selection() {
@@ -135,9 +127,10 @@ execute_selection() {
         6) echo -e "\n${C_ORANGE}[Power] Profile: PERFORMANCE${NC}"; su -c "for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done" 2>/dev/null; sleep 1 ;;
         7) echo -e "\n${C_CYAN}[Power] Profile: COOLDOWN${NC}"; su -c "for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo powersave > \$i; done" 2>/dev/null; sleep 1 ;;
         8) echo -e "\n${C_RED}[System] Resetting Bridges...${NC}"; bash ~/stop-debian.sh && bash ~/mount-debian.sh; sleep 1 ;;
-        9) bash ~/mount-debian.sh; su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/sh -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; apt update && apt upgrade -y'"; echo -e "\nFinished. Press Enter..."; read ;;
-        10) clear; exit 0 ;;
-        11) bash ~/termux-system-shutdown.sh ;;
+        9) bash ~/scripts/gpu-audit.sh; echo -e "\nPress any key..."; read -n 1 ;;
+        10) bash ~/mount-debian.sh; su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/sh -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; apt update && apt upgrade -y'"; echo -e "\nFinished. Press Enter..."; read ;;
+        11) clear; exit 0 ;;
+        12) bash ~/termux-system-shutdown.sh ;;
     esac
     clear
 }
@@ -165,9 +158,10 @@ while true; do
             ;;
         "") execute_selection ;;
         [1-9]) SELECTED=$((key - 1)); execute_selection ;;
-        "0") SELECTED=9; execute_selection ;;
-        [xX]) SELECTED=10; execute_selection ;;
-        [sS]) SELECTED=11; execute_selection ;;
+        [gG]) SELECTED=9; execute_selection ;;
+        "0") SELECTED=10; execute_selection ;;
+        [xX]) SELECTED=11; execute_selection ;;
+        [sS]) SELECTED=12; execute_selection ;;
         [qQ]) clear; exit 0 ;;
     esac
     if [ $SELECTED -lt 0 ]; then SELECTED=$((${#OPTIONS[@]} - 1)); fi
