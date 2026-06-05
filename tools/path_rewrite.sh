@@ -4,7 +4,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OLD_USER="ruusian"
-NEW_USER="Ruusian5"
+NEW_USER="ruusian"
 
 if [ "$#" -gt 0 ]; then
   REPO_ROOT="$1"

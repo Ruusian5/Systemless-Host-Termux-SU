@@ -1,0 +1,15 @@
+#!/bin/sh
+# Firefox launcher - drops privileges to ruusian before launching
+if [ -f /etc/profile.d/99-hardware-acceleration.sh ]; then
+    . /etc/profile.d/99-hardware-acceleration.sh
+fi
+export DISPLAY=:0
+export PULSE_SERVER=tcp:127.0.0.1:4713
+export XDG_RUNTIME_DIR=/run/user/1000
+export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+export MOZ_DISABLE_CONTENT_SANDBOX=1
+export MOZ_DISABLE_GMP_SANDBOX=1
+export MOZ_DISABLE_RDD_SANDBOX=1
+export MOZ_DISABLE_SOCKET_PROCESS_SANDBOX=1
+export HOME=/home/ruusian
+exec /usr/sbin/runuser -u ruusian -g ruusian -p -- /usr/bin/firefox --new-instance "$@" > /home/ruusian/firefox.log 2>&1

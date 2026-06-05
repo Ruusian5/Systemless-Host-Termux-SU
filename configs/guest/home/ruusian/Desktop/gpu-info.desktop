@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=GPU Info
+Comment=Vulkan & OpenGL diagnostic info
+Exec=xfce4-terminal -e 'bash -c "vulkaninfo --summary | head -30; echo; glxinfo -B 2>/dev/null || echo GLX unavailable; read -p Press Enter"'
+Icon=computer
+StartupNotify=true
+Terminal=false
+Categories=System;Utility;

@@ -16,6 +16,7 @@ Thumbs.db
 # Backups & archives
 backups/**
 archives/**
+mesa-*.tar.xz
 
 # Chroot + rootfs (never commit)
 /data/local/tmp/chrootDebian/**

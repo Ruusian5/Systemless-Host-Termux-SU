@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=File Manager
+Comment=Browse the file system
+Exec=thunar %u
+Icon=org.xfce.thunar
+StartupNotify=true
+Terminal=false
+Categories=Utility;FileManager;
+MimeType=inode/directory;

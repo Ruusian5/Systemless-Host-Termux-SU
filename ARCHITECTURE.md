@@ -14,6 +14,6 @@ This project bridges an Android Termux host environment with a full Debian chroo
 - Exposes Android hardware nodes (`/dev/kgsl-3d0`, `/dev/dri`, `/dev/ion`) to the Debian guest.
 
 ### 3. Guest Layer (Debian Chroot)
-- The user `Ruusian5` operates within this isolated but hardware-linked environment.
+- The user `ruusian` operates within this isolated but hardware-linked environment.
 - Hardware Acceleration is achieved by pointing the Vulkan ICD loader directly at the `freedreno` drivers, utilizing Zink over Turnip to translate OpenGL to Vulkan natively on the Adreno GPU.
 - **No Software Rendering**: The environment is strictly configured (`LIBGL_ALWAYS_HW=1`) to fail rather than fallback to CPU rendering, ensuring you always know if acceleration drops.

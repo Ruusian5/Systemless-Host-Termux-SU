@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # --- PRO WORKSTATION AUTOMATED INSTALLER v0.1 ---
 # Hardened Enterprise Edition
 # BY RUUSIAN
@@ -41,14 +41,14 @@ done
 
 # 3. Environment Synchronization
 echo -e "\n${C_BOLD}[2/5] Deploying System Management Scripts...${NC}"
-REPO_DIR=$(pwd)
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Ensure we are in the right directory
-if [ ! -d "scripts" ]; then
-    echo -e "${C_RED}[!] Error: scripts directory not found. Are you in the repo root?${NC}"
+if [ ! -d "bin" ]; then
+    echo -e "${C_RED}[!] Error: bin directory not found. Are you in the repo root?${NC}"
     exit 1
 fi
 
-cp -v scripts/*.sh "$HOME/"
+cp -v bin/*.sh "$HOME/"
 chmod +x "$HOME"/*.sh
 
 # 4. Shell Integration
@@ -58,15 +58,15 @@ if ! grep -q "cmds.sh" "$HOME/.bashrc" 2>/dev/null; then
 
 # --- PRO WORKSTATION HUD ---
 alias agy='bash ~/cmds.sh'
-alias res='bash ~/res.sh'
-alias sd='bash ~/termux-system-shutdown.sh'
+alias res='bash ~/toggle-resolution.sh'
+alias sd='bash ~/stop-guest.sh'
 alias fix='bash ~/repair.sh'
 alias gpu='bash ~/gpu-check.sh'
-alias deb='bash ~/cli-bridge.sh'
+alias deb='bash ~/enter-cli.sh'
 
 if [[ $- == *i* ]]; then
     termux-wake-lock 2>/dev/null
-    { bash ~/mount-debian.sh > /dev/null 2>&1; } & disown
+    { bash ~/mount-guest.sh > /dev/null 2>&1; } & disown
     timeout 3s bash ~/cmds.sh --once
 fi
 EOF
@@ -84,8 +84,8 @@ if ! su -c "test -d $DEBIANPATH" 2>/dev/null; then
     echo -e "Please ensure your Debian chroot is extracted to that location."
 else
     # Trigger mount bridge
-    bash "$HOME/mount-debian.sh"
-    
+    bash "$HOME/mount-guest.sh"
+
     # Sync internal configs
     # We use a temporary script for the complex su -c block to avoid quoting issues
     SYNC_SCRIPT=$(mktemp)
@@ -93,11 +93,11 @@ else
 #!/bin/sh
 set -eu
 mkdir -p "$DEBIANPATH/etc/profile.d/" "$DEBIANPATH/usr/local/bin/" "$DEBIANPATH/home/ruusian/"
-cp -v "$REPO_DIR/configs/debian/etc/profile.d/"*.sh "$DEBIANPATH/etc/profile.d/"
-cp -v "$REPO_DIR/configs/debian/usr/local/bin/"*.sh "$DEBIANPATH/usr/local/bin/"
-cp -v "$REPO_DIR/configs/debian/home/ruusian/fix_mmap.c" "$DEBIANPATH/home/ruusian/"
+cp -v "$REPO_DIR/configs/guest/etc/profile.d/"*.sh "$DEBIANPATH/etc/profile.d/"
+cp -v "$REPO_DIR/configs/guest/usr/local/bin/"*.sh "$DEBIANPATH/usr/local/bin/"
+cp -v "$REPO_DIR/configs/guest/home/ruusian/fix_mmap.c" "$DEBIANPATH/home/ruusian/"
 chmod +x "$DEBIANPATH/usr/local/bin/"*.sh
-
+EOF
 # Guest Environment Preparation
 echo '\n${C_BOLD}[5/6] Hardening Guest User & Packages...${NC}'
 /data/data/com.termux/files/usr/bin/busybox chroot "$DEBIANPATH" /usr/bin/sh -c '

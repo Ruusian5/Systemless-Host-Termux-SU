@@ -1,0 +1,8 @@
+#!/bin/sh
+# VLC launcher - drops privileges to ruusian before launching
+export DISPLAY=:0
+export PULSE_SERVER=tcp:127.0.0.1:4713
+export XDG_RUNTIME_DIR=/run/user/1000
+export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+export HOME=/home/ruusian
+exec runuser -u ruusian -g ruusian -p -- /usr/bin/vlc "$@" > /home/ruusian/vlc.log 2>&1
