@@ -92,11 +92,15 @@ else
     cat << EOF > "$SYNC_SCRIPT"
 #!/bin/sh
 set -eu
-mkdir -p "$DEBIANPATH/etc/profile.d/" "$DEBIANPATH/usr/local/bin/" "$DEBIANPATH/home/ruusian/"
+mkdir -p "$DEBIANPATH/etc/profile.d/" "$DEBIANPATH/usr/local/bin/" "$DEBIANPATH/home/ruusian/" "$DEBIANPATH/etc/sudoers.d/" "$DEBIANPATH/run/"
 cp -v "$REPO_DIR/configs/debian/etc/profile.d/"*.sh "$DEBIANPATH/etc/profile.d/"
 cp -v "$REPO_DIR/configs/debian/usr/local/bin/"*.sh "$DEBIANPATH/usr/local/bin/"
 cp -v "$REPO_DIR/configs/debian/home/ruusian/fix_mmap.c" "$DEBIANPATH/home/ruusian/"
 chmod +x "$DEBIANPATH/usr/local/bin/"*.sh
+
+# Setup chroot networking (bind host resolv)
+cp /data/data/com.termux/files/usr/etc/resolv.conf "$DEBIANPATH/etc/resolv.conf" 2>/dev/null || echo "nameserver 8.8.8.8" > "$DEBIANPATH/etc/resolv.conf"
+chmod 644 "$DEBIANPATH/etc/resolv.conf"
 
 # Guest Environment Preparation
 echo -e "\n${C_BOLD}[5/6] Hardening Guest User & Packages...${NC}"
