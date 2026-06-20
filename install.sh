@@ -99,7 +99,7 @@ cp -v "$REPO_DIR/configs/debian/home/ruusian/fix_mmap.c" "$DEBIANPATH/home/ruusi
 chmod +x "$DEBIANPATH/usr/local/bin/"*.sh
 
 # Guest Environment Preparation
-echo '\n${C_BOLD}[5/6] Hardening Guest User & Packages...${NC}'
+echo -e "\n${C_BOLD}[5/6] Hardening Guest User & Packages...${NC}"
 /data/data/com.termux/files/usr/bin/busybox chroot "$DEBIANPATH" /usr/bin/sh -c '
     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     export DEBIAN_FRONTEND=noninteractive
@@ -128,7 +128,7 @@ echo '\n${C_BOLD}[5/6] Hardening Guest User & Packages...${NC}'
 '
 
 # Building Kernel Bypass Library
-echo '\n${C_BOLD}[6/6] Building Kernel Bypass Library...${NC}'
+echo -e "\n${C_BOLD}[6/6] Building Kernel Bypass Library...${NC}"
 /data/data/com.termux/files/usr/bin/busybox chroot "$DEBIANPATH" /usr/bin/sh -c '
     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     gcc -shared -fPIC -ldl /home/ruusian/fix_mmap.c -o /home/ruusian/fix_mmap.so

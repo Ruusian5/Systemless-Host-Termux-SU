@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-TOKEN=""
+TOKEN="${GITHUB_TOKEN:-}"
 REPO="Ruusian5/Systemless-Host-Termux-SU"
 TAG="v0.1.0-offline"
 
@@ -54,6 +54,6 @@ upload_asset gpu-report.txt
 upload_asset checksums.sha256
 
 echo "[+] Starting large upload for debian-rootfs.tar.zst..."
-nohup upload_asset debian-rootfs.tar.zst > /data/data/com.termux/files/home/offline-release/upload.log 2>upload_asset debian-rootfs.tar.zst1 &
+nohup upload_asset debian-rootfs.tar.zst > "$HOME/offline-release/upload.log" 2>&1 &
 
 echo "[✓] All assets uploaded. Offline deployment release published!"

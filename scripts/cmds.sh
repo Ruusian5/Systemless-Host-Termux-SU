@@ -127,7 +127,7 @@ execute_selection() {
         6) echo -e "\n${C_ORANGE}[Power] Profile: PERFORMANCE${NC}"; su -c "for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done" 2>/dev/null; sleep 1 ;;
         7) echo -e "\n${C_CYAN}[Power] Profile: COOLDOWN${NC}"; su -c "for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo powersave > \$i; done" 2>/dev/null; sleep 1 ;;
         8) echo -e "\n${C_RED}[System] Resetting Bridges...${NC}"; bash ~/stop-debian.sh && bash ~/mount-debian.sh; sleep 1 ;;
-        9) bash ~/scripts/gpu-audit.sh; echo -e "\nPress any key..."; read -n 1 ;;
+        9) bash ~/gpu-audit.sh; echo -e "\nPress any key..."; read -n 1 ;;
         10) bash ~/mount-debian.sh; su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/sh -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; apt update && apt upgrade -y'"; echo -e "\nFinished. Press Enter..."; read ;;
         11) clear; exit 0 ;;
         12) bash ~/termux-system-shutdown.sh ;;
