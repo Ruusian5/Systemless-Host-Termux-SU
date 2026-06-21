@@ -55,9 +55,10 @@ su -c "
     dotmpfs tmpfs $DEBIANPATH/var/lock rw,mode=1777,noatime
 
     # Permissions
-    mkdir -p $DEBIANPATH/run/user/1000
-    chown 1000:1000 $DEBIANPATH/run/user/1000
-    chmod 700 $DEBIANPATH/run/user/1000
+    RUUSIAN_UID=$(/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/id -u ruusian 2>/dev/null || echo 1001)
+    mkdir -p $DEBIANPATH/run/user/$RUUSIAN_UID
+    chown $RUUSIAN_UID:$RUUSIAN_UID $DEBIANPATH/run/user/$RUUSIAN_UID
+    chmod 777 $DEBIANPATH/run/user/$RUUSIAN_UID
     chmod 666 /dev/kgsl-3d0 /dev/dri/* /dev/video* /dev/ion /dev/adsp* /dev/adsprpc* 2>/dev/null || true
 "
 

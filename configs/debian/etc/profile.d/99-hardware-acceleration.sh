@@ -8,7 +8,7 @@ export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/freedreno_icd.aarch64.json
 
 # 2. RUNTIME & IPC
 export DISPLAY=:0
-export XDG_RUNTIME_DIR=/run/user/1000
+export XDG_RUNTIME_DIR=/run/user/1001
 export PULSE_SERVER=tcp:127.0.0.1:4713
 
 # 3. FIXES

@@ -16,9 +16,9 @@ if [ ! -S /run/dbus/system_bus_socket ]; then
 fi
 
 # 3. PREPARE RUNTIME
-mkdir -p /run/user/1000
-chown 1000:1000 /run/user/1000
-chmod 700 /run/user/1000
+mkdir -p /run/user/1001
+chown 1001:1001 /run/user/1001
+chmod 700 /run/user/1001
 
 # 4. LAUNCH SESSION
 exec /usr/bin/su - ruusian -c "/usr/local/bin/user-session.sh"
