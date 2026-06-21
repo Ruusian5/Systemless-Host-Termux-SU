@@ -147,7 +147,7 @@ clear
 
 while true; do
     render
-    read -rsn1 -t 3 key
+    read -rsn1 -t 30 key
     case "$key" in
         $'\x1b')
             read -rsn2 -t 0.05 extra
@@ -156,7 +156,8 @@ while true; do
                 "[B") ((SELECTED++)) ;;
             esac
             ;;
-        "") execute_selection ;;
+        $'\n'|$'\r') execute_selection ;;
+        "") : ;;
         [1-9]) SELECTED=$((key - 1)); execute_selection ;;
         [gG]) SELECTED=9; execute_selection ;;
         "0") SELECTED=10; execute_selection ;;
