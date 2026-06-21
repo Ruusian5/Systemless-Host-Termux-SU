@@ -15,9 +15,9 @@ if [ -f ~/stop-debian.sh ]; then
     bash ~/stop-debian.sh
 fi
 
-# 2. Kill remaining host processes (exact names only)
-pkill -x termux-x11 2>/dev/null
-pkill -x pulseaudio 2>/dev/null
+# 2. Kill remaining host processes (BusyBox pgrep: no -x)
+pkill -15 termux-x11 2>/dev/null
+pkill -15 pulseaudio 2>/dev/null
 pkill -f clipboard-sync.sh 2>/dev/null
 
 # 3. Release wake lock
