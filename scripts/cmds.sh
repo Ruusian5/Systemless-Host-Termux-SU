@@ -1,155 +1,75 @@
 #!/bin/bash
-# --- OS MISSION CONTROL v16.1 (NEON TUI) ---
-# Ultra-Performance Workstation Controller
+# --- MISSION CONTROL v1.0 ---
 
-# 1. THEME & COLORS
+C_CYAN='\e[36m'
+C_GREEN='\e[32m'
+C_GRAY='\e[90m'
 C_BOLD='\e[1m'
-C_ACCENT='\e[38;5;135m' # Neon Purple
-C_CYAN='\e[38;5;39m'   # Electric Cyan
-C_ORANGE='\e[38;5;208m'
-C_GREEN='\e[38;5;82m'
-C_RED='\e[38;5;196m'
-C_GRAY='\e[38;5;244m'
-C_DIM='\e[2m'
 NC='\e[0m'
 
 DEBIANPATH="/data/local/tmp/chrootDebian"
-SELECTED=0
-OPTIONS=(
-    "LAUNCH WORKSTATION (GUI)"
-    "ENTER LINUX TERMINAL (CLI)"
-    "GPU/VULKAN DIAGNOSTIC"
-    "SYSTEM REPAIR & CLEANUP"
-    "DEBIAN MAINTENANCE (UPDATE)"
-    "EXIT MISSION CONTROL"
-    "FULL SYSTEM SHUTDOWN"
-)
-
-# 2. DATA VISUALIZATION ENGINE
-draw_bar() {
-    local perc=${1:-0}
-    [[ ! "$perc" =~ ^[0-9]+$ ]] && perc=0
-    [ "$perc" -gt 100 ] && perc=100
-    
-    local width=15
-    local filled=$((perc * width / 100))
-    local empty=$((width - filled))
-    printf "${C_GRAY}[${NC}"
-    printf "${C_CYAN}"
-    for ((i=0; i<filled; i++)); do printf "■"; done
-    printf "${C_GRAY}"
-    for ((i=0; i<empty; i++)); do printf "□"; done
-    printf "${C_GRAY}]${NC} %d%%" "$perc"
-}
-
-get_stats() {
-    CPU_RAW=$(uptime | awk -F'load average:' '{ print $2 }' | awk -F',' '{ print $1 }' | sed 's/ //g')
-    CPU_CORES=$(nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 8)
-    CPU_PERC=$(echo "scale=0; ($CPU_RAW * 100) / $CPU_CORES" | bc 2>/dev/null | cut -d. -f1 || echo 0)
-    [[ ! "$CPU_PERC" =~ ^[0-9]+$ ]] && CPU_PERC=0
-    [ "$CPU_PERC" -gt 100 ] && CPU_PERC=100
-
-    read -r MEM_PERC <<< $(free | awk '/Mem:/ { if($2>0) printf "%d", ($3*100)/$2; else print "0" }')
-
-    BATT_JSON=$(termux-battery-status 2>/dev/null)
-    BATT_PERC=$(echo "$BATT_JSON" | grep -oEi '"percentage": [0-9]+' | awk '{print $2}')
-    BATT_STAT=$(echo "$BATT_JSON" | grep -oEi '"status": "[^"]+"' | awk -F'"' '{print $4}')
-    [ -z "$BATT_PERC" ] && BATT_PERC="0"
-
-    TEMP=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null)
-    if [ -n "$TEMP" ]; then TEMP="$((TEMP/1000))°C"; else TEMP="N/A"; fi
-
-    IP_ADDR=$(ip -4 addr show 2>/dev/null | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | cut -d/ -f1 | head -1)
-    [ -z "$IP_ADDR" ] && IP_ADDR="DISCONNECTED"
-
-    STORAGE_PERC=$(df -h /sdcard 2>/dev/null | awk 'NR==2 {print $5}' | sed 's/%//')
-    [ -z "$STORAGE_PERC" ] && STORAGE_PERC="0"
-
-    grep -q "$DEBIANPATH" /proc/mounts 2>/dev/null && ST_DEB="${C_GREEN}CONNECTED${NC}" || ST_DEB="${C_RED}DETACHED${NC}"
-    grep -q "$DEBIANPATH/sdcard" /proc/mounts 2>/dev/null && ST_SD="${C_GREEN}LINKED${NC}" || ST_SD="${C_RED}MISSING${NC}"
-    if [ -S "/data/data/com.termux/files/usr/tmp/.X11-unix/X0" ] && ps aux 2>/dev/null | grep -v grep | grep -q "[t]ermux-x11"; then
-        ST_X11="${C_GREEN}ACTIVE${NC}"
-    else
-        ST_X11="${C_RED}IDLE${NC}"
-    fi
-
-    CUR_RES=$(su -c "wm size" 2>/dev/null | grep -oEi '[0-9]+x[0-9]+' | tail -n 1)
-    [ -z "$CUR_RES" ] && CUR_RES="1080x2340"
-
-    command -v termux-battery-status >/dev/null 2>&1 && ST_API="${C_GREEN}READY${NC}" || ST_API="${C_RED}ERR${NC}"
-}
-
-render() {
-    printf "\e[H\e[2J"
-    get_stats
-    
-    echo -e "${C_ACCENT}${C_BOLD} ⚡ PRO-TERMUX MISSION CONTROL v0.1 ${NC} ${C_DIM}| BY RUUSIAN${NC}"
-    echo -e "${C_DIM} ──────────────────────────────────────────────────────────────${NC}"
-    
-    printf "  ${C_BOLD}CPU${NC}  %-22s  ${C_BOLD}MEM${NC}  %-22s\n" "$(draw_bar $CPU_PERC)" "$(draw_bar $MEM_PERC)"
-    printf "  ${C_BOLD}BAT${NC}  %-22s  ${C_BOLD}DSK${NC}  %-22s\n" "$(draw_bar $BATT_PERC)" "$(draw_bar $STORAGE_PERC)"
-    
-    echo -e "\n  ${C_GRAY}THERMAL:${NC} $TEMP  ${C_GRAY}NET:${NC} ${C_CYAN}$IP_ADDR${NC}  ${C_GRAY}BATT:${NC} ${C_ORANGE}$BATT_STAT${NC}"
-    echo -e "  ${C_GRAY}DEBIAN:${NC} $ST_DEB  ${C_GRAY}SDCARD:${NC} $ST_SD  ${C_GRAY}X11:${NC} $ST_X11  ${C_GRAY}API:${NC} $ST_API"
-    echo -e "${C_DIM} ──────────────────────────────────────────────────────────────${NC}"
-    
-    echo -e "  ${C_BOLD}FAST-PATH ALIASES:${NC}"
-    echo -e "  ${C_CYAN}agy${NC}: Dashboard  ${C_CYAN}res${NC}: 2K Toggle  ${C_CYAN}deb${NC}: Linux CLI  ${C_CYAN}sd${NC}: Shutdown"
-    echo -e "  ${C_CYAN}fix${NC}: Auto-Repair  ${C_CYAN}gpu${NC}: GPU Audit"
-    echo -e "${C_DIM} ──────────────────────────────────────────────────────────────${NC}"
-
-    echo -e "  ${C_CYAN}Current Context:${NC} ${C_BOLD}$CUR_RES${NC} @ ${C_BOLD}ADRENO-640${NC}"
-    echo -e "${C_DIM} ──────────────────────────────────────────────────────────────${NC}"
-    echo ""
-
-    for i in "${!OPTIONS[@]}"; do
-        if [ $i -eq $SELECTED ]; then
-            echo -e "  ${C_BOLD}${C_ACCENT}▶ ${OPTIONS[$i]}${NC} ${C_ACCENT}◀${NC}"
-        else
-            echo -e "    ${C_GRAY}${OPTIONS[$i]}${NC}"
-        fi
-    done
-    
-    echo ""
-    echo -e "  ${C_DIM}[1-6] Run  |  [S] Shutdown  |  [Q] Exit${NC}"
-}
-
-execute_selection() {
-    clear
-    case $SELECTED in
-        0) echo -e "\n${C_CYAN}[System] Launching Desktop...${NC}"; bash ~/startxfce4_chrootDebian.sh & disown; sleep 2 ;;
-        1) bash ~/mount-debian.sh; su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/local/bin/v3-cli.sh" ;;
-        2) bash ~/gpu-check.sh; echo -e "\nPress any key..."; read -n 1 ;;
-        3) bash ~/repair.sh; echo -e "\nPress any key..."; read -n 1 ;;
-        4) bash ~/mount-debian.sh; su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/sh -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; apt update && apt upgrade -y'"; echo -e "\nFinished. Press Enter..."; read ;;
-        5) clear; exit 0 ;;
-        6) bash ~/termux-system-shutdown.sh ;;
-    esac
-    clear
-}
-
-if [ "$1" == "--once" ]; then
-    get_stats
-    render
-    exit 0
-fi
-
-trap 'clear; exit 0' SIGINT SIGTERM EXIT
-clear
 
 while true; do
-    render
-    echo -ne "\n  ${C_CYAN}Select option${NC} [1-6]: "
-    read -r key
-    case "$key" in
-        1) SELECTED=0; execute_selection ;;
-        2) SELECTED=1; execute_selection ;;
-        3) SELECTED=2; execute_selection ;;
-        4) SELECTED=3; execute_selection ;;
-        5) SELECTED=4; execute_selection ;;
-        6) SELECTED=5; execute_selection ;;
-        [sS]) SELECTED=6; execute_selection ;;
-        [qQ]) clear; exit 0 ;;
-        *) ;;
+    # Simple header
+    echo ""
+    echo -e "${C_BOLD}${C_CYAN}⚡ MISSION CONTROL${NC}  ${C_GRAY}| BY RUUSIAN${NC}"
+    echo -e "${C_GRAY}───${NC}"
+
+    # Single-line stats
+    CPU=$(uptime | awk -F'load average:' '{print $2}' | awk -F',' '{print $1}' | xargs)
+    MEM=$(free -h | awk '/Mem:/ {print $3"/"$2}')
+    grep -q "$DEBIANPATH" /proc/mounts 2>/dev/null && ST="${C_GREEN}OK${NC}" || ST="${C_RED}DOWN${NC}"
+    echo -e "  ${C_GRAY}CPU${NC} $CPU  ${C_GRAY}MEM${NC} $MEM  ${C_GRAY}DEBIAN${NC} $ST"
+    echo -e "${C_GRAY}───${NC}"
+    echo ""
+
+    # Menu items
+    echo "  ${C_BOLD}1${NC}) Launch GUI"
+    echo "  ${C_BOLD}2${NC}) Terminal (CLI)"
+    echo "  ${C_BOLD}3${NC}) GPU Check"
+    echo "  ${C_BOLD}4${NC}) Repair"
+    echo "  ${C_BOLD}5${NC}) Update Debian"
+    echo "  ${C_BOLD}6${NC}) Shutdown"
+    echo "  ${C_BOLD}0${NC}) Exit"
+    echo ""
+
+    # Input
+    read -p "  ${C_CYAN}>${NC} " choice
+
+    case "$choice" in
+        1)
+            echo -e "\n${C_GREEN}[+] Launching Desktop...${NC}"
+            bash ~/startxfce4_chrootDebian.sh & disown
+            sleep 2
+            echo -e "${C_GREEN}  Open Termux:X11 app to see desktop${NC}"
+            read -p "  Press Enter " _
+            ;;
+        2)
+            bash ~/mount-debian.sh 2>/dev/null
+            echo -e "\n${C_GREEN}[+] Entering Debian. Type 'exit' to return.${NC}"
+            su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/local/bin/v3-cli.sh"
+            ;;
+        3)
+            bash ~/gpu-check.sh
+            read -p "  Press Enter " _
+            ;;
+        4)
+            bash ~/repair.sh
+            read -p "  Press Enter " _
+            ;;
+        5)
+            bash ~/mount-debian.sh 2>/dev/null
+            echo -e "\n${C_GREEN}[+] Updating Debian...${NC}"
+            su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/sh -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; apt-get update 2>&1 | tail -2; apt-get upgrade -y 2>&1 | tail -3'"
+            read -p "  Press Enter " _
+            ;;
+        6)
+            bash ~/termux-system-shutdown.sh
+            read -p "  Press Enter " _
+            ;;
+        0|q|Q)
+            clear
+            exit 0
+            ;;
     esac
 done
