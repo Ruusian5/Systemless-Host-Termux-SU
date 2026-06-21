@@ -111,7 +111,7 @@ render() {
     done
     
     echo ""
-    echo -e "  ${C_DIM}KEYS: [1-6] RUN | [S] SHUTDOWN | [X/Q] EXIT | [↑↓] NAV${NC}"
+    echo -e "  ${C_DIM}[1-6] Run  |  [S] Shutdown  |  [Q] Exit${NC}"
 }
 
 execute_selection() {
@@ -134,27 +134,22 @@ if [ "$1" == "--once" ]; then
     exit 0
 fi
 
-trap 'clear; tput cnorm 2>/dev/null; exit 0' SIGINT SIGTERM EXIT
-tput cnorm 2>/dev/null
+trap 'clear; exit 0' SIGINT SIGTERM EXIT
 clear
 
 while true; do
     render
-    read -rsn1 -t 30 key
+    echo -ne "\n  ${C_CYAN}Select option${NC} [1-6]: "
+    read -r key
     case "$key" in
-        $'\x1b')
-            read -rsn2 -t 0.05 extra
-            case "$extra" in
-                "[A") ((SELECTED--)) ;;
-                "[B") ((SELECTED++)) ;;
-            esac
-            ;;
-        $'\n'|$'\r') execute_selection ;;
-        "") : ;;
-        [1-6]) SELECTED=$((key - 1)); execute_selection ;;
+        1) SELECTED=0; execute_selection ;;
+        2) SELECTED=1; execute_selection ;;
+        3) SELECTED=2; execute_selection ;;
+        4) SELECTED=3; execute_selection ;;
+        5) SELECTED=4; execute_selection ;;
+        6) SELECTED=5; execute_selection ;;
         [sS]) SELECTED=6; execute_selection ;;
-        [xXqQ]) clear; exit 0 ;;
+        [qQ]) clear; exit 0 ;;
+        *) ;;
     esac
-    if [ $SELECTED -lt 0 ]; then SELECTED=$((${#OPTIONS[@]} - 1)); fi
-    if [ $SELECTED -ge ${#OPTIONS[@]} ]; then SELECTED=0; fi
 done
