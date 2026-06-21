@@ -16,18 +16,12 @@ NC='\e[0m'
 DEBIANPATH="/data/local/tmp/chrootDebian"
 SELECTED=0
 OPTIONS=(
-    "LAUNCH WORKSTATION (GUI)" 
-    "ENTER LINUX TERMINAL (CLI)" 
-    "GPU/VULKAN DIAGNOSTIC" 
-    "SYSTEM REPAIR & CLEANUP" 
-    "DEBIAN DEV TOOL INSTALLER"
-    "CUSTOM MESA DRIVER BUILD"
-    "POWER PROFILE: PERFORMANCE"
-    "POWER PROFILE: COOLDOWN"
-    "RESET KERNEL BRIDGES" 
-    "GPU STACK AUDIT & AUTO-FIX"
+    "LAUNCH WORKSTATION (GUI)"
+    "ENTER LINUX TERMINAL (CLI)"
+    "GPU/VULKAN DIAGNOSTIC"
+    "SYSTEM REPAIR & CLEANUP"
     "DEBIAN MAINTENANCE (UPDATE)"
-    "EXIT MISSION CONTROL" 
+    "EXIT MISSION CONTROL"
     "FULL SYSTEM SHUTDOWN"
 )
 
@@ -112,7 +106,7 @@ render() {
     done
     
     echo ""
-    echo -e "  ${C_DIM}KEYS: [1-9,G,0] RUN | [S] SHUTDOWN | [X/Q] EXIT | [↑↓] NAV${NC}"
+    echo -e "  ${C_DIM}KEYS: [1-6] RUN | [S] SHUTDOWN | [X/Q] EXIT | [↑↓] NAV${NC}"
 }
 
 execute_selection() {
@@ -122,15 +116,9 @@ execute_selection() {
         1) bash ~/mount-debian.sh; su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/local/bin/v3-cli.sh" ;;
         2) bash ~/gpu-check.sh; echo -e "\nPress any key..."; read -n 1 ;;
         3) bash ~/repair.sh; echo -e "\nPress any key..."; read -n 1 ;;
-        4) bash ~/install-tools.sh ;;
-        5) bash ~/build-custom-mesa.sh ;;
-        6) echo -e "\n${C_ORANGE}[Power] Profile: PERFORMANCE${NC}"; su -c "for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done" 2>/dev/null; sleep 1 ;;
-        7) echo -e "\n${C_CYAN}[Power] Profile: COOLDOWN${NC}"; su -c "for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo powersave > \$i; done" 2>/dev/null; sleep 1 ;;
-        8) echo -e "\n${C_RED}[System] Resetting Bridges...${NC}"; bash ~/stop-debian.sh && bash ~/mount-debian.sh; sleep 1 ;;
-        9) bash ~/gpu-audit.sh; echo -e "\nPress any key..."; read -n 1 ;;
-        10) bash ~/mount-debian.sh; su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/sh -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; apt update && apt upgrade -y'"; echo -e "\nFinished. Press Enter..."; read ;;
-        11) clear; exit 0 ;;
-        12) bash ~/termux-system-shutdown.sh ;;
+        4) bash ~/mount-debian.sh; su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/sh -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; apt update && apt upgrade -y'"; echo -e "\nFinished. Press Enter..."; read ;;
+        5) clear; exit 0 ;;
+        6) bash ~/termux-system-shutdown.sh ;;
     esac
     clear
 }
@@ -158,12 +146,9 @@ while true; do
             ;;
         $'\n'|$'\r') execute_selection ;;
         "") : ;;
-        [1-9]) SELECTED=$((key - 1)); execute_selection ;;
-        [gG]) SELECTED=9; execute_selection ;;
-        "0") SELECTED=10; execute_selection ;;
-        [xX]) SELECTED=11; execute_selection ;;
-        [sS]) SELECTED=12; execute_selection ;;
-        [qQ]) clear; exit 0 ;;
+        [1-6]) SELECTED=$((key - 1)); execute_selection ;;
+        [sS]) SELECTED=6; execute_selection ;;
+        [xXqQ]) clear; exit 0 ;;
     esac
     if [ $SELECTED -lt 0 ]; then SELECTED=$((${#OPTIONS[@]} - 1)); fi
     if [ $SELECTED -ge ${#OPTIONS[@]} ]; then SELECTED=0; fi
