@@ -5,13 +5,18 @@ if [ -f /etc/profile.d/99-hardware-acceleration.sh ]; then
     . /etc/profile.d/99-hardware-acceleration.sh
 fi
 
-# We must ensure DBUS is running to change xfconf settings
-eval $(dbus-launch --sh-syntax)
+# Fix ICE authority (must be writable by ruusian)
+rm -f $XDG_RUNTIME_DIR/ICEauthority 2>/dev/null
+touch $XDG_RUNTIME_DIR/ICEauthority 2>/dev/null
+chmod 600 $XDG_RUNTIME_DIR/ICEauthority 2>/dev/null
+
+# Start DBUS session bus
+export $(dbus-launch)
 export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SESSION_BUS_PID
 
-# Disable compositing explicitly! Zink over Termux-X11 cannot handle XFWM4 compositing and will black screen.
+# Disable compositing (llvmpipe + Termux-X11 = no compositor)
 xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false 2>/dev/null
 
 echo "Starting XFCE4 Session..." > /home/ruusian/session_debug.log
-exec startxfce4 >> /home/ruusian/session_debug.log 2>&1
+startxfce4 >> /home/ruusian/session_debug.log 2>&1

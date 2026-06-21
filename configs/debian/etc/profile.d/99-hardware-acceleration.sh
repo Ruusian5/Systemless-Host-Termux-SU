@@ -1,10 +1,12 @@
 # --- SUPER-LEVEL OS HARDWARE BRIDGE (v15.4) ---
 
-# 1. CORE GPU PIPELINE (ZINK + TURNIP KGSL)
-export GALLIUM_DRIVER=zink
-export MESA_LOADER_DRIVER_OVERRIDE=zink
-export TU_DEBUG=noconform,kgsl
-export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/freedreno_icd.aarch64.json
+# 1. CORE GPU PIPELINE - llvmpipe fallback (Zink/Vulkan broken on older kernels)
+# Vulkan via Turnip fails on kernel 4.14+MSM DRM (known KHR_display bug).
+# Use llvmpipe for reliable software OpenGL rendering.
+export GALLIUM_DRIVER=llvmpipe
+unset MESA_LOADER_DRIVER_OVERRIDE
+unset TU_DEBUG
+unset VK_ICD_FILENAMES
 
 # 2. RUNTIME & IPC
 export DISPLAY=:0
