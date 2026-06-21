@@ -7,29 +7,29 @@ BUSYBOX="/data/data/com.termux/files/usr/bin/busybox"
 
 echo -e "\e[1;33m[~] Initiating Graceful System Cleanup...\e[0m"
 
-# 1. Graceful Shutdown (SIGTERM)
-su -c "pkill -15 -f xfce" 2>/dev/null
-su -c "pkill -15 -f thunar" 2>/dev/null
-su -c "pkill -15 -f dbus" 2>/dev/null
-pkill -15 -f termux-x11 2>/dev/null
-pkill -15 -f pulseaudio 2>/dev/null
-pkill -15 -f picom 2>/dev/null
-pkill -15 -f socat 2>/dev/null
-pkill -15 -f clipboard-sync.sh 2>/dev/null
+# 1. Graceful Shutdown (SIGTERM) - target exact process names only
+su -c "pkill -15 -x xfce4-session" 2>/dev/null
+su -c "pkill -15 -x xfwm4" 2>/dev/null
+su -c "pkill -15 -x xfdesktop" 2>/dev/null
+pkill -15 -x termux-x11 2>/dev/null
+pkill -15 -x pulseaudio 2>/dev/null
+pkill -15 -x picom 2>/dev/null
+pkill -15 -x socat 2>/dev/null
+pkill -f clipboard-sync.sh 2>/dev/null
 am force-stop com.termux.x11 2>/dev/null
 
 echo -e "\e[1;36m[→] Waiting for processes to exit cleanly...\e[0m"
 sleep 2
 
 # 2. Forceful Cleanup of Orphans (SIGKILL)
-su -c "pkill -9 -f xfce" 2>/dev/null
-su -c "pkill -9 -f thunar" 2>/dev/null
-su -c "pkill -9 -f dbus" 2>/dev/null
-pkill -9 -f termux-x11 2>/dev/null
-pkill -9 -f pulseaudio 2>/dev/null
-pkill -9 -f picom 2>/dev/null
-pkill -9 -f socat 2>/dev/null
-pkill -9 -f clipboard-sync.sh 2>/dev/null
+su -c "pkill -9 -x xfce4-session" 2>/dev/null
+su -c "pkill -9 -x xfwm4" 2>/dev/null
+su -c "pkill -9 -x xfdesktop" 2>/dev/null
+pkill -9 -x termux-x11 2>/dev/null
+pkill -9 -x pulseaudio 2>/dev/null
+pkill -9 -x picom 2>/dev/null
+pkill -9 -x socat 2>/dev/null
+pkill -f clipboard-sync.sh 2>/dev/null
 
 # 3. Log Rotation
 mv ~/x11_server.log ~/x11_server.log.old 2>/dev/null

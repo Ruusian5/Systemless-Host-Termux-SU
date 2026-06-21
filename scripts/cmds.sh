@@ -44,34 +44,39 @@ draw_bar() {
 
 get_stats() {
     CPU_RAW=$(uptime | awk -F'load average:' '{ print $2 }' | awk -F',' '{ print $1 }' | sed 's/ //g')
-    CPU_PERC=$(echo "$CPU_RAW * 12.5" | bc | cut -d. -f1 2>/dev/null || echo 0)
+    CPU_CORES=$(nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 8)
+    CPU_PERC=$(echo "scale=0; ($CPU_RAW * 100) / $CPU_CORES" | bc 2>/dev/null | cut -d. -f1 || echo 0)
     [[ ! "$CPU_PERC" =~ ^[0-9]+$ ]] && CPU_PERC=0
     [ "$CPU_PERC" -gt 100 ] && CPU_PERC=100
 
     read -r MEM_PERC <<< $(free | awk '/Mem:/ { if($2>0) printf "%d", ($3*100)/$2; else print "0" }')
-    
+
     BATT_JSON=$(termux-battery-status 2>/dev/null)
     BATT_PERC=$(echo "$BATT_JSON" | grep -oEi '"percentage": [0-9]+' | awk '{print $2}')
     BATT_STAT=$(echo "$BATT_JSON" | grep -oEi '"status": "[^"]+"' | awk -F'"' '{print $4}')
     [ -z "$BATT_PERC" ] && BATT_PERC="0"
-    
+
     TEMP=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null)
     if [ -n "$TEMP" ]; then TEMP="$((TEMP/1000))°C"; else TEMP="N/A"; fi
 
-    IP_ADDR=$(ifconfig wlan0 2>/dev/null | grep 'inet ' | awk '{print $2}')
+    IP_ADDR=$(ip -4 addr show 2>/dev/null | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | cut -d/ -f1 | head -1)
     [ -z "$IP_ADDR" ] && IP_ADDR="DISCONNECTED"
 
-    STORAGE_PERC=$(df -h /sdcard | awk 'NR==2 {print $5}' | sed 's/%//')
+    STORAGE_PERC=$(df -h /sdcard 2>/dev/null | awk 'NR==2 {print $5}' | sed 's/%//')
     [ -z "$STORAGE_PERC" ] && STORAGE_PERC="0"
 
     grep -q "$DEBIANPATH" /proc/mounts 2>/dev/null && ST_DEB="${C_GREEN}CONNECTED${NC}" || ST_DEB="${C_RED}DETACHED${NC}"
     grep -q "$DEBIANPATH/sdcard" /proc/mounts 2>/dev/null && ST_SD="${C_GREEN}LINKED${NC}" || ST_SD="${C_RED}MISSING${NC}"
-    [ -S "/data/data/com.termux/files/usr/tmp/.X11-unix/X0" ] && pgrep -f "termux-x11" >/dev/null && ST_X11="${C_GREEN}ACTIVE${NC}" || ST_X11="${C_RED}IDLE${NC}"
-    
+    if [ -S "/data/data/com.termux/files/usr/tmp/.X11-unix/X0" ] && ps aux 2>/dev/null | grep -v grep | grep -q "[t]ermux-x11"; then
+        ST_X11="${C_GREEN}ACTIVE${NC}"
+    else
+        ST_X11="${C_RED}IDLE${NC}"
+    fi
+
     CUR_RES=$(su -c "wm size" 2>/dev/null | grep -oEi '[0-9]+x[0-9]+' | tail -n 1)
     [ -z "$CUR_RES" ] && CUR_RES="1080x2340"
-    
-    command -v termux-battery-status >/dev/null && ST_API="${C_GREEN}READY${NC}" || ST_API="${C_RED}ERR${NC}"
+
+    command -v termux-battery-status >/dev/null 2>&1 && ST_API="${C_GREEN}READY${NC}" || ST_API="${C_RED}ERR${NC}"
 }
 
 render() {
@@ -112,7 +117,7 @@ render() {
 execute_selection() {
     clear
     case $SELECTED in
-        0) echo -e "\n${C_CYAN}[System] Launching Desktop...${NC}"; bash ~/startxfce4_chrootDebian.sh || sleep 2 ;;
+        0) echo -e "\n${C_CYAN}[System] Launching Desktop...${NC}"; bash ~/startxfce4_chrootDebian.sh & disown; sleep 2 ;;
         1) bash ~/mount-debian.sh; su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/local/bin/v3-cli.sh" ;;
         2) bash ~/gpu-check.sh; echo -e "\nPress any key..."; read -n 1 ;;
         3) bash ~/repair.sh; echo -e "\nPress any key..."; read -n 1 ;;
