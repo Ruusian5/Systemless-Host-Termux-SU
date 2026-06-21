@@ -1,7 +1,7 @@
 #!/bin/bash
 # --- HARDWARE VERIFICATION SCRIPT (INTERNAL) ---
 echo "[1] Checking Vulkan Instance..."
-export XDG_RUNTIME_DIR=/run/user/1000
+. /etc/profile.d/99-hardware-acceleration.sh
 vulkaninfo --summary 2>/dev/null | grep -E "Adreno|device" || echo "Vulkan: FAILED (Check SELinux/Permissions)"
 
 echo "[2] Checking OpenGL via Zink..."

@@ -1,7 +1,6 @@
 #!/bin/bash
 . /etc/profile.d/99-hardware-acceleration.sh
 export DISPLAY=:0
-export XDG_RUNTIME_DIR=/run/user/1000
 
 echo "[+] Waiting for X Server..."
 until xdpyinfo > /dev/null 2>&1; do
