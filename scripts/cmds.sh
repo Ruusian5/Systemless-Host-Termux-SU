@@ -10,6 +10,15 @@ N=$'\e[0m'
 
 DEBIANPATH="/data/local/tmp/chrootDebian"
 
+# --once mode: show status and exit (used by .bashrc startup)
+if [ "$1" == "--once" ]; then
+    CPU=$(uptime | awk -F'load average:' '{print $2}' | awk -F',' '{print $1}' | xargs)
+    MEM=$(free -h | awk '/Mem:/ {print $3"/"$2}')
+    grep -q "$DEBIANPATH" /proc/mounts 2>/dev/null && ST="OK" || ST="DOWN"
+    echo "${GY}CPU $CPU | MEM $MEM | DEBIAN $ST${N}"
+    exit 0
+fi
+
 while true; do
     echo ""
     echo "${B}${C}⚡ MISSION CONTROL${N}  ${GY}| BY RUUSIAN${N}"
