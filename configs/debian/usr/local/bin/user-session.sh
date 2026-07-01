@@ -15,8 +15,8 @@ export $(dbus-launch)
 export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SESSION_BUS_PID
 
-# Disable compositing (llvmpipe + Termux-X11 = no compositor)
-xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false 2>/dev/null
+# Disable compositing with timeout (prevents infinite spin on slow systems)
+timeout 5 xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false 2>/dev/null || true
 
 echo "Starting XFCE4 Session..." > /home/ruusian/session_debug.log
 startxfce4 >> /home/ruusian/session_debug.log 2>&1

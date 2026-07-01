@@ -10,7 +10,7 @@ unset VK_ICD_FILENAMES
 
 # 2. RUNTIME & IPC
 export DISPLAY=:0
-export XDG_RUNTIME_DIR=/run/user/1001
+export XDG_RUNTIME_DIR=/run/user/1000
 export PULSE_SERVER=tcp:127.0.0.1:4713
 
 # 3. FIXES

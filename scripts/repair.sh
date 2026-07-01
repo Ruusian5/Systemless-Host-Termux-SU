@@ -22,11 +22,16 @@ echo -e "\n${C_BOLD}[1/5] Auditing Debian Package Health...${NC}"
 su -c "$BUSYBOX chroot $DEBIANPATH /usr/bin/sh -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; dpkg --configure -a && apt-get install -f -y'" || echo -e "  ${C_ORANGE}[!] Debian health check had warnings.${NC}"
 echo -e "  [✓] Packages verified."
 
-# 2. X11 Lock File Cleanup
-echo -e "\n${C_BOLD}[2/5] Cleaning X11 Sockets...${NC}"
+# 2. X11 Lock File Cleanup (skip if healthy)
+echo -e "\n${C_BOLD}[2/5] Checking X11 Sockets...${NC}"
 TERMUX_TMP="/data/data/com.termux/files/usr/tmp"
-rm -f "$TERMUX_TMP"/.X0-lock "$TERMUX_TMP"/.X11-unix/X0 2>/dev/null || true
-echo -e "  [✓] Stale sockets purged."
+if [ -S "$TERMUX_TMP/.X11-unix/X0" ] && pgrep -f "termux-x11" >/dev/null 2>&1; then
+    echo -e "  [✓] X server healthy - preserving socket."
+else
+    echo -e "  [~] Cleaning stale sockets..."
+    rm -f "$TERMUX_TMP"/.X0-lock "$TERMUX_TMP"/.X11-unix/X0 2>/dev/null || true
+    echo -e "  [✓] Stale sockets purged."
+fi
 
 # 3. Storage & Kernel Optimization
 echo -e "\n${C_BOLD}[3/5] Optimizing Storage & Kernel...${NC}"

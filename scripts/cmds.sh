@@ -1,95 +1,94 @@
 #!/bin/bash
-# --- MISSION CONTROL v2.0 ---
+# --- PRO WORKSTATION DASHBOARD v2.0 ---
+# By Ruusian
 
-# ANSI codes via $'' syntax (works with plain echo)
-B=$'\e[1m'
-C=$'\e[36m'
-G=$'\e[32m'
-R=$'\e[31m'
-Y=$'\e[33m'
-GY=$'\e[90m'
-N=$'\e[0m'
+C_BOLD='\e[1m'
+C_CYAN='\e[38;5;39m'
+C_GREEN='\e[38;5;82m'
+C_RED='\e[38;5;196m'
+C_ORANGE='\e[38;5;208m'
+C_PURPLE='\e[38;5;141m'
+NC='\e[0m'
 
-DEBIANPATH="/data/local/tmp/chrootDebian"
+clear
+echo -e "${C_CYAN}${C_BOLD}"
+echo "╔══════════════════════════════════════════╗"
+echo "║     PRO WORKSTATION DASHBOARD v2.0      ║"
+echo "║        Systemless-Host-Termux-SU        ║"
+echo "╚══════════════════════════════════════════╝"
+echo -e "${NC}"
 
-# ---- Stats ----
-stats() {
-    CPU=$(uptime | awk -F'load average:' '{print $2}' | awk -F',' '{print $1}' | xargs)
-    MEM=$(free -h | awk '/Mem:/ {print $3"/"$2}')
-    grep -q "$DEBIANPATH" /proc/mounts 2>/dev/null && ST="${G}OK$N" || ST="${R}DOWN$N"
-    echo "  ${GY}CPU$N $CPU  ${GY}MEM$N $MEM  ${GY}DEBIAN$N $ST"
-}
-
-# ---- Options ----
-opt_gui() {
-    echo ""
-    echo "${G}[+] Launching Desktop...$N"
-    bash ~/startxfce4_chrootDebian.sh & disown
-    sleep 2
-    echo "${G}  Open Termux:X11 app to see the desktop$N"
-    read -p "  Press Enter " _
-}
-
-opt_cli() {
-    bash ~/mount-debian.sh 2>/dev/null
-    echo ""
-    echo "${G}[+] Debian CLI - type 'exit' to return$N"
-    su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/local/bin/v3-cli.sh"
-}
-
-opt_gpu() {
-    bash ~/gpu-check.sh
-    read -p "  Press Enter " _
-}
-
-opt_repair() {
-    bash ~/repair.sh
-    read -p "  Press Enter " _
-}
-
-opt_update() {
-    bash ~/mount-debian.sh 2>/dev/null
-    echo ""
-    echo "${G}[+] Updating Debian...$N"
-    su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/sh -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; apt-get update 2>&1 | tail -2; apt-get upgrade -y 2>&1 | tail -3'"
-    read -p "  Press Enter " _
-}
-
-opt_shutdown() {
-    bash ~/termux-system-shutdown.sh
-    read -p "  Press Enter " _
-}
-
-# ---- --once mode (for bashrc) ----
-if [ "$1" = "--once" ]; then
-    stats
-    exit 0
-fi
-
-# ---- Main loop ----
 while true; do
+    # Check chroot status
+    if su -c "test -d /data/local/tmp/chrootDebian/usr/bin" 2>/dev/null; then
+        CHROOT_STATUS="${C_GREEN}● Mounted${NC}"
+    else
+        CHROOT_STATUS="${C_RED}○ Unmounted${NC}"
+    fi
+    
+    # Check X server
+    if [ -S /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ] 2>/dev/null; then
+        X_STATUS="${C_GREEN}● Running${NC}"
+    else
+        X_STATUS="${C_RED}○ Stopped${NC}"
+    fi
+
+    # Check PulseAudio
+    if pgrep -x pulseaudio >/dev/null 2>&1; then
+        PA_STATUS="${C_GREEN}● Running${NC}"
+    else
+        PA_STATUS="${C_RED}○ Stopped${NC}"
+    fi
+
+    echo -e "${C_BOLD}System Status:${NC}"
+    echo -e "  Chroot:  $CHROOT_STATUS"
+    echo -e "  X11:     $X_STATUS"
+    echo -e "  Audio:   $PA_STATUS"
     echo ""
-    echo "${B}${C}⚡ MISSION CONTROL$N  ${GY}| BY RUUSIAN$N"
-    echo "${GY}────────────────────────────────$N"
-    stats
-    echo "${GY}────────────────────────────────$N"
+    echo -e "${C_BOLD}${C_CYAN}─── Quick Actions ───${NC}"
+    echo -e "  ${C_GREEN}[1]${NC}  Start GUI Desktop     ${C_GREEN}[2]${NC}  Stop GUI"
+    echo -e "  ${C_GREEN}[3]${NC}  Mount Chroot          ${C_GREEN}[4]${NC}  Unmount Chroot"
+    echo -e "  ${C_GREEN}[5]${NC}  Repair & Optimize     ${C_GREEN}[6]${NC}  GPU Audit"
+    echo -e "  ${C_GREEN}[7]${NC}  Start PulseAudio      ${C_GREEN}[8]${NC}  Fix Audio"
     echo ""
-    echo "  ${B}1$N) Launch GUI"
-    echo "  ${B}2$N) Terminal (CLI)"
-    echo "  ${B}3$N) GPU Check"
-    echo "  ${B}4$N) Repair"
-    echo "  ${B}5$N) Update Debian"
-    echo "  ${B}6$N) Shutdown"
-    echo "  ${B}0$N) Exit"
+    echo -e "${C_BOLD}${C_PURPLE}─── Shell Access ───${NC}"
+    echo -e "  ${C_PURPLE}[9]${NC}  Login as root         ${C_PURPLE}[10]${NC} Login as ruusian"
+    echo -e "  ${C_PURPLE}[11]${NC} Hermes Gateway        ${C_PURPLE}[12]${NC} Start Hermes (sudo)"
     echo ""
-    read -p "  ${C}>$N " ch
-    case "$ch" in
-        1) opt_gui ;;
-        2) opt_cli ;;
-        3) opt_gpu ;;
-        4) opt_repair ;;
-        5) opt_update ;;
-        6) opt_shutdown ;;
-        0|q|Q) clear; echo ""; exit 0 ;;
+    echo -e "${C_BOLD}${C_ORANGE}─── Utilities ───${NC}"
+    echo -e "  ${C_ORANGE}[13]${NC} Backup Chroot         ${C_ORANGE}[14]${NC} Clipboard Sync"
+    echo -e "  ${C_ORANGE}[15]${NC} Clear System Cache    ${C_ORANGE}[r]${NC}  Refresh Status"
+    echo ""
+    echo -e "  ${C_RED}[q]${NC}  Quit Dashboard"
+    echo ""
+    echo -ne "${C_BOLD}Select option: ${NC}"
+    read -r opt
+    
+    case $opt in
+        1) bash ~/startxfce4_chrootDebian.sh ;;
+        2) bash ~/stop-debian.sh ;;
+        3) bash ~/mount-debian.sh ;;
+        4) bash ~/stop-debian.sh ;;
+        5) bash ~/repair.sh ;;
+        6) bash ~/gpu-audit.sh ;;
+        7) pulseaudio --start --load="module-native-protocol-tcp port=4713 auth-anonymous=1 auth-ip-acl=127.0.0.1" --load="module-always-sink" 2>/dev/null;;
+        8) bash ~/fix-audio.sh 2>/dev/null || pulseaudio --kill 2>/dev/null; rm -f ~/.config/pulse/*-runtime/pid; pulseaudio --start --load="module-native-protocol-tcp port=4713 auth-anonymous=1 auth-ip-acl=127.0.0.1" --load="module-always-sink" 2>/dev/null;;
+        9) su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /bin/su -l" ;;
+        10) su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /bin/su -l ruusian" ;;
+        11) su -c "busybox chroot /data/local/tmp/chrootDebian /home/ruusian/.hermes/hermes-agent/venv/bin/python3 -m hermes_cli.gateway" 2>/dev/null || echo "Hermes not found" ;;
+        12) su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'sudo /home/ruusian/.hermes/hermes-agent/venv/bin/python3 -m hermes_cli.gateway'" 2>/dev/null || echo "Hermes not found" ;;
+        13) su -c "tar -cf /sdcard/debian-backup-manual-\$(date +%Y%m%d_%H%M%S).tar -C /data/local/tmp chrootDebian" && echo "Backup saved to /sdcard";;
+        14) bash ~/clipboard-sync.sh & ;;
+        15) su -c "sync && echo 3 > /proc/sys/vm/drop_caches" 2>/dev/null && echo "Cache cleared";;
+        r|R) clear ;;
+        q|Q) echo -e "${C_GREEN}Goodbye!${NC}"; exit 0 ;;
+        *) echo -e "${C_RED}Invalid option${NC}"; sleep 1 ;;
     esac
+    
+    if [ "$opt" != "r" ] && [ "$opt" != "R" ]; then
+        echo ""
+        echo -ne "${C_ORANGE}Press Enter to return to dashboard...${NC}"
+        read -r
+        clear
+    fi
 done
