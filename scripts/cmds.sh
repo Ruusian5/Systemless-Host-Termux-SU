@@ -20,7 +20,7 @@ echo -e "${NC}"
 
 while true; do
     # Check chroot status
-    if su -c "test -d /data/local/tmp/chrootDebian/usr/bin" 2>/dev/null; then
+    if # Require root - using su -c "test -d /data/local/tmp/chrootDebian/usr/bin" 2>/dev/null; then
         CHROOT_STATUS="${C_GREEN}● Mounted${NC}"
     else
         CHROOT_STATUS="${C_RED}○ Unmounted${NC}"
@@ -65,6 +65,7 @@ while true; do
     read -r opt
     
     case $opt in
+        16) bash ~/cleanup.sh ;;\n        17) su -c "busybox chroot /data/local/tmp/chrootDebian /usr/local/bin/log-cleanup.sh" ;;
         1) bash ~/startxfce4_chrootDebian.sh ;;
         2) bash ~/stop-debian.sh ;;
         3) bash ~/mount-debian.sh ;;
@@ -73,13 +74,13 @@ while true; do
         6) bash ~/gpu-audit.sh ;;
         7) pulseaudio --start --load="module-native-protocol-tcp port=4713 auth-anonymous=1 auth-ip-acl=127.0.0.1" --load="module-always-sink" 2>/dev/null;;
         8) bash ~/fix-audio.sh 2>/dev/null || pulseaudio --kill 2>/dev/null; rm -f ~/.config/pulse/*-runtime/pid; pulseaudio --start --load="module-native-protocol-tcp port=4713 auth-anonymous=1 auth-ip-acl=127.0.0.1" --load="module-always-sink" 2>/dev/null;;
-        9) su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /bin/su -l" ;;
-        10) su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /bin/su -l ruusian" ;;
-        11) su -c "busybox chroot /data/local/tmp/chrootDebian /home/ruusian/.hermes/hermes-agent/venv/bin/python3 -m hermes_cli.gateway" 2>/dev/null || echo "Hermes not found" ;;
-        12) su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'sudo /home/ruusian/.hermes/hermes-agent/venv/bin/python3 -m hermes_cli.gateway'" 2>/dev/null || echo "Hermes not found" ;;
-        13) su -c "tar -cf /sdcard/debian-backup-manual-\$(date +%Y%m%d_%H%M%S).tar -C /data/local/tmp chrootDebian" && echo "Backup saved to /sdcard";;
+        9) # Require root - using su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /bin/su -l" ;;
+        10) # Require root - using su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /bin/su -l ruusian" ;;
+        11) # Require root - using su -c "busybox chroot /data/local/tmp/chrootDebian /home/ruusian/.hermes/hermes-agent/venv/bin/python3 -m hermes_cli.gateway" 2>/dev/null || echo "Hermes not found" ;;
+        12) # Require root - using su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'sudo /home/ruusian/.hermes/hermes-agent/venv/bin/python3 -m hermes_cli.gateway'" 2>/dev/null || echo "Hermes not found" ;;
+        13) # Require root - using su -c "tar -cf /sdcard/debian-backup-manual-\$(date +%Y%m%d_%H%M%S).tar -C /data/local/tmp chrootDebian" && echo "Backup saved to /sdcard";;
         14) bash ~/clipboard-sync.sh & ;;
-        15) su -c "sync && echo 3 > /proc/sys/vm/drop_caches" 2>/dev/null && echo "Cache cleared";;
+        15) # Require root - using su -c "sync && echo 3 > /proc/sys/vm/drop_caches" 2>/dev/null && echo "Cache cleared";;
         r|R) clear ;;
         q|Q) echo -e "${C_GREEN}Goodbye!${NC}"; exit 0 ;;
         *) echo -e "${C_RED}Invalid option${NC}"; sleep 1 ;;
@@ -92,3 +93,6 @@ while true; do
         clear
     fi
 done
+check_root() { if [ "$(id -u)" -ne 0 ] && ! command -v su >/dev/null; then echo "Root required"; exit 1; fi }
+
+  echo -e "  ${C_ORANGE}[16]${NC} Cleanup System      ${C_ORANGE}[17]${NC} Log Cleanup"
