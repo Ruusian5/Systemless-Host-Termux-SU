@@ -29,7 +29,9 @@ while true; do
     fi
 
     # Check X server (socket + process to detect stale sockets)
-    if [ -S /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ] && pgrep -f "com.termux.x11\|termux-x11" >/dev/null 2>&1; then
+    X_PROC=""; pgrep -f "com.termux.x11" >/dev/null 2>&1 && X_PROC=1
+    pgrep -f "termux-x11" >/dev/null 2>&1 && X_PROC=1
+    if [ -S /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ] && [ -n "$X_PROC" ]; then
         X_STATUS="${C_GREEN}● Running${NC}"
     elif [ -S /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ]; then
         X_STATUS="${C_ORANGE}○ Stale socket${NC}"
