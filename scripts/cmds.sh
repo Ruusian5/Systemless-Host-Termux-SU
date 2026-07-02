@@ -77,16 +77,52 @@ while true; do
         3) bash ~/mount-debian.sh ;;
         4) bash ~/repair.sh ;;
         5) bash ~/gpu-audit.sh ;;
-        6) pulseaudio --start --load="module-native-protocol-tcp port=4713 auth-anonymous=1 auth-ip-acl=127.0.0.1" --load="module-always-sink" 2>/dev/null;;
-        7) bash ~/fix-audio.sh 2>/dev/null || pulseaudio --kill 2>/dev/null; rm -f ~/.config/pulse/*-runtime/pid; pulseaudio --start --load="module-native-protocol-tcp port=4713 auth-anonymous=1 auth-ip-acl=127.0.0.1" --load="module-always-sink" 2>/dev/null;;
-        8) su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /bin/su -l" ;;
-        9) su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /bin/su -l ruusian" ;;
+        6) if pulseaudio --start --load="module-native-protocol-tcp port=4713 auth-anonymous=1 auth-ip-acl=127.0.0.1" --load="module-always-sink" 2>/dev/null; then
+                echo -e "${C_GREEN}PulseAudio started${NC}"
+            else
+                echo -e "${C_ORANGE}PulseAudio already running or failed to start${NC}"
+            fi ;;
+        7) bash ~/fix-audio.sh 2>/dev/null || { pulseaudio --kill 2>/dev/null; rm -f ~/.config/pulse/*-runtime/pid 2>/dev/null; pulseaudio --start --load="module-native-protocol-tcp port=4713 auth-anonymous=1 auth-ip-acl=127.0.0.1" --load="module-always-sink" 2>/dev/null && echo -e "${C_GREEN}PulseAudio restarted${NC}" || echo -e "${C_RED}Fix Audio failed${NC}"; } ;;
+        8) if su -c "test -d /data/local/tmp/chrootDebian/usr/bin" 2>/dev/null; then
+                echo -e "${C_GREEN}Entering chroot as root...${NC}"
+                su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /bin/su -l"
+            else
+                echo -e "${C_RED}Chroot not found at /data/local/tmp/chrootDebian${NC}"
+            fi ;;
+        9) if su -c "test -d /data/local/tmp/chrootDebian/usr/bin" 2>/dev/null; then
+                echo -e "${C_GREEN}Entering chroot as ruusian...${NC}"
+                su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /bin/su -l ruusian"
+            else
+                echo -e "${C_RED}Chroot not found at /data/local/tmp/chrootDebian${NC}"
+            fi ;;
         10) echo -e "${C_GREEN}Starting Hermes Gateway in background...${NC}"
-            nohup su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd; nohup /home/ruusian/.hermes/hermes-agent/venv/bin/hermes gateway run > /home/ruusian/.hermes/logs/gateway.log 2>&1 &'" > /dev/null 2>&1 &
-            echo -e "${C_GREEN}Gateway started. Login as ruusian [9] and use 'hermes' for interactive chat.${NC}" ;;
+            if ! su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'test -f /home/ruusian/.hermes/hermes-agent/venv/bin/hermes'" 2>/dev/null; then
+                echo -e "${C_RED}Hermes not installed. Run setup inside the chroot first.${NC}"
+            elif su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -f hermes.*gateway.run' 2>/dev/null | head -1" | grep -q .; then
+                echo -e "${C_ORANGE}Hermes Gateway is already running.${NC}"
+            else
+                nohup su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd; nohup /home/ruusian/.hermes/hermes-agent/venv/bin/hermes gateway run > /home/ruusian/.hermes/logs/gateway.log 2>&1 &'" > /dev/null 2>&1 &
+                sleep 1
+                if su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -f hermes.*gateway.run' 2>/dev/null | head -1" | grep -q .; then
+                    echo -e "${C_GREEN}Gateway started. Login as ruusian [9] and use 'hermes' for interactive chat.${NC}"
+                else
+                    echo -e "${C_RED}Gateway failed to start. Check /home/ruusian/.hermes/logs/gateway.log inside chroot.${NC}"
+                fi
+            fi ;;
         11) echo -e "${C_GREEN}Starting Hermes Gateway with sudo in background...${NC}"
-            nohup su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd; sudo nohup /home/ruusian/.hermes/hermes-agent/venv/bin/hermes gateway run > /home/ruusian/.hermes/logs/gateway.log 2>&1 &'" > /dev/null 2>&1 &
-            echo -e "${C_GREEN}Gateway started (sudo). Login as ruusian [9] and use 'hermes' for interactive chat.${NC}" ;;
+            if ! su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'test -f /home/ruusian/.hermes/hermes-agent/venv/bin/hermes'" 2>/dev/null; then
+                echo -e "${C_RED}Hermes not installed. Run setup inside the chroot first.${NC}"
+            elif su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -f hermes.*gateway.run' 2>/dev/null | head -1" | grep -q .; then
+                echo -e "${C_ORANGE}Hermes Gateway is already running.${NC}"
+            else
+                nohup su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd; sudo nohup /home/ruusian/.hermes/hermes-agent/venv/bin/hermes gateway run > /home/ruusian/.hermes/logs/gateway.log 2>&1 &'" > /dev/null 2>&1 &
+                sleep 1
+                if su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -f hermes.*gateway.run' 2>/dev/null | head -1" | grep -q .; then
+                    echo -e "${C_GREEN}Gateway started (sudo). Login as ruusian [9] and use 'hermes' for interactive chat.${NC}"
+                else
+                    echo -e "${C_RED}Gateway failed to start. Check /home/ruusian/.hermes/logs/gateway.log inside chroot.${NC}"
+                fi
+            fi ;;
         12) BACKUP_FILE="/sdcard/debian-backup-manual-$(date +%Y%m%d_%H%M%S).tar"
             echo -e "${C_GREEN}Creating backup (excluding /dev, /proc, /sys)...${NC}"
             su -c "/data/data/com.termux/files/usr/bin/tar --exclude='dev/*' --exclude='proc/*' --exclude='sys/*' -cf \"$BACKUP_FILE\" -C /data/local/tmp chrootDebian" 2>&1 && echo -e "${C_GREEN}Backup saved: $BACKUP_FILE${NC}" || echo -e "${C_RED}Backup failed${NC}" ;;
