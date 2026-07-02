@@ -65,7 +65,6 @@ while true; do
     read -r opt
     
     case $opt in
-        16) bash ~/cleanup.sh ;;\n        17) su -c "busybox chroot /data/local/tmp/chrootDebian /usr/local/bin/log-cleanup.sh" ;;
         1) bash ~/startxfce4_chrootDebian.sh ;;
         2) bash ~/stop-debian.sh ;;
         3) bash ~/mount-debian.sh ;;
@@ -81,11 +80,13 @@ while true; do
         13) # Require root - using su -c "tar -cf /sdcard/debian-backup-manual-\$(date +%Y%m%d_%H%M%S).tar -C /data/local/tmp chrootDebian" && echo "Backup saved to /sdcard";;
         14) bash ~/clipboard-sync.sh & ;;
         15) # Require root - using su -c "sync && echo 3 > /proc/sys/vm/drop_caches" 2>/dev/null && echo "Cache cleared";;
+        16) bash ~/cleanup.sh ;;
+        17) su -c "busybox chroot /data/local/tmp/chrootDebian /usr/local/bin/log-cleanup.sh" ;;
         r|R) clear ;;
         q|Q) echo -e "${C_GREEN}Goodbye!${NC}"; exit 0 ;;
         *) echo -e "${C_RED}Invalid option${NC}"; sleep 1 ;;
     esac
-    
+
     if [ "$opt" != "r" ] && [ "$opt" != "R" ]; then
         echo ""
         echo -ne "${C_ORANGE}Press Enter to return to dashboard...${NC}"
@@ -93,6 +94,3 @@ while true; do
         clear
     fi
 done
-check_root() { if [ "$(id -u)" -ne 0 ] && ! command -v su >/dev/null; then echo "Root required"; exit 1; fi }
-
-  echo -e "  ${C_ORANGE}[16]${NC} Cleanup System      ${C_ORANGE}[17]${NC} Log Cleanup"
