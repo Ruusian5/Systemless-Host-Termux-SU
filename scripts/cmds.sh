@@ -19,16 +19,20 @@ echo "╚═══════════════════════�
 echo -e "${NC}"
 
 while true; do
-    # Check chroot status
-    if su -c "test -d /data/local/tmp/chrootDebian/usr/bin" 2>/dev/null; then
+    # Check chroot status (actual bind mounts, not just directory presence)
+    if su -c "grep -q 'chrootDebian /dev' /proc/mounts" 2>/dev/null; then
         CHROOT_STATUS="${C_GREEN}● Mounted${NC}"
+    elif su -c "test -d /data/local/tmp/chrootDebian/usr/bin" 2>/dev/null; then
+        CHROOT_STATUS="${C_ORANGE}○ Unmounted (dir only)${NC}"
     else
-        CHROOT_STATUS="${C_RED}○ Unmounted${NC}"
+        CHROOT_STATUS="${C_RED}○ Missing${NC}"
     fi
 
-    # Check X server
-    if [ -S /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ] 2>/dev/null; then
+    # Check X server (socket + process to detect stale sockets)
+    if [ -S /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ] && pgrep -f "com.termux.x11\|termux-x11" >/dev/null 2>&1; then
         X_STATUS="${C_GREEN}● Running${NC}"
+    elif [ -S /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ]; then
+        X_STATUS="${C_ORANGE}○ Stale socket${NC}"
     else
         X_STATUS="${C_RED}○ Stopped${NC}"
     fi
