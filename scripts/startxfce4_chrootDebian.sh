@@ -24,6 +24,7 @@ MISSING=""
 command -v termux-x11 >/dev/null 2>&1 || MISSING="$MISSING termux-x11"
 command -v pulseaudio >/dev/null 2>&1 || MISSING="$MISSING pulseaudio"
 command -v virgl_test_server_android >/dev/null 2>&1 || echo -e "${C_YELLOW}[!] virgl_test_server_android not found — GPU acceleration disabled${NC}"
+command -v am >/dev/null 2>&1 || echo -e "${C_YELLOW}[!] 'am' not found — Termux:X11 app must be opened manually${NC}"
 test -f ~/mount-debian.sh || MISSING="$MISSING mount-debian.sh"
 test -f ~/clipboard-sync.sh || MISSING="$MISSING clipboard-sync.sh"
 if [ -n "$MISSING" ]; then
@@ -36,7 +37,7 @@ fi
 su -c "setenforce 0" 2>/dev/null || echo -e "${C_YELLOW}[!] SELinux check failed (Non-critical)${NC}"
 
 terminate_process "termux-x11"
-pkill -x pulseaudio 2>/dev/null || true
+terminate_process "pulseaudio"
 
 # Clean stale locks
 rm -rf "$TERMUX_TMP"/.X0-lock "$TERMUX_TMP"/.X11-unix/X0 2>/dev/null
@@ -93,17 +94,18 @@ COUNT=0
 while [ ! -S "$TERMUX_TMP/.X11-unix/X0" ]; do
     sleep 0.5
     ((COUNT++))
-    # Show a progress dot every 2 seconds
+    # Show elapsed seconds every 2s
     if [ $((COUNT % 4)) -eq 0 ]; then
-        echo -n "."
+        echo -ne "\r  [$((${COUNT}/2))s/20s] "
     fi
     if [ $COUNT -ge 40 ]; then
-        echo ""
-        echo -e "${C_RED}[!] Display Server timeout (20s). Check ~/x11_server.log${NC}"
+        echo -ne "\r  [20s/20s] "
+        echo -e "\n${C_RED}[!] Display Server timeout (20s). Check ~/x11_server.log${NC}"
         echo -e "${C_YELLOW}[~] Rolling back started services...${NC}"
         terminate_process "pulseaudio"
         pkill -f virgl_test_server_android 2>/dev/null || true
-        kill %1 %2 %3 2>/dev/null || true
+        # Kill background jobs by PID if we can find them
+        kill $(jobs -p) 2>/dev/null || true
         exit 1
     fi
 done
