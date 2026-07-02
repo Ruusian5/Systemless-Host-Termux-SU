@@ -36,9 +36,13 @@ su -c "
     # Ensure internal directories exist
     mkdir -p $DEBIANPATH/dev $DEBIANPATH/proc $DEBIANPATH/sys $DEBIANPATH/system $DEBIANPATH/vendor $DEBIANPATH/apex $DEBIANPATH/linkerconfig $DEBIANPATH/sdcard $DEBIANPATH/data/data/com.termux/files/usr $DEBIANPATH/tmp $DEBIANPATH/run
     # /var/lock is a symlink to /run/lock inside the chroot — replace with a real
-    # dir so tmpfs can mount on it (mount doesn't follow symlinks)
-    rm -rf $DEBIANPATH/var/lock
-    mkdir -p $DEBIANPATH/var/lock $DEBIANPATH/dev/shm $DEBIANPATH/dev/pts
+    # dir so tmpfs can mount on it (mount doesn't follow symlinks).
+    # Skip if already mounted (e.g. from a previous mount-debian run).
+    if ! grep -q -w "$DEBIANPATH/var/lock" /proc/mounts 2>/dev/null; then
+        rm -rf $DEBIANPATH/var/lock
+        mkdir -p $DEBIANPATH/var/lock
+    fi
+    mkdir -p $DEBIANPATH/dev/shm $DEBIANPATH/dev/pts
     
     domount /dev $DEBIANPATH/dev
     domount /proc $DEBIANPATH/proc
