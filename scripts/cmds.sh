@@ -84,18 +84,31 @@ while true; do
             fi ;;
         7) bash ~/fix-audio.sh 2>/dev/null || { pulseaudio --kill 2>/dev/null; rm -f ~/.config/pulse/*-runtime/pid 2>/dev/null; pulseaudio --start --load="module-native-protocol-tcp port=4713 auth-anonymous=1 auth-ip-acl=127.0.0.1" --load="module-always-sink" 2>/dev/null && echo -e "${C_GREEN}PulseAudio restarted${NC}" || echo -e "${C_RED}Fix Audio failed${NC}"; } ;;
         8) if su -c "test -d /data/local/tmp/chrootDebian/usr/bin" 2>/dev/null; then
+                # Clean stale X socket if no X process
+                X_PROC=""; pgrep -f "com.termux.x11" >/dev/null 2>&1 && X_PROC=1; pgrep -f "termux-x11" >/dev/null 2>&1 && X_PROC=1
+                if [ -S /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ] && [ -z "$X_PROC" ]; then
+                    rm -f /data/data/com.termux/files/usr/tmp/.X11-unix/X0 /data/data/com.termux/files/usr/tmp/.X0-lock 2>/dev/null
+                fi
                 echo -e "${C_GREEN}Entering chroot as root...${NC}"
+                su -c "setenforce 0" 2>/dev/null
                 su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /bin/su -l"
             else
                 echo -e "${C_RED}Chroot not found at /data/local/tmp/chrootDebian${NC}"
             fi ;;
         9) if su -c "test -d /data/local/tmp/chrootDebian/usr/bin" 2>/dev/null; then
+                # Clean stale X socket if no X process
+                X_PROC=""; pgrep -f "com.termux.x11" >/dev/null 2>&1 && X_PROC=1; pgrep -f "termux-x11" >/dev/null 2>&1 && X_PROC=1
+                if [ -S /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ] && [ -z "$X_PROC" ]; then
+                    rm -f /data/data/com.termux/files/usr/tmp/.X11-unix/X0 /data/data/com.termux/files/usr/tmp/.X0-lock 2>/dev/null
+                fi
                 echo -e "${C_GREEN}Entering chroot as ruusian...${NC}"
+                su -c "setenforce 0" 2>/dev/null
                 su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /bin/su -l ruusian"
             else
                 echo -e "${C_RED}Chroot not found at /data/local/tmp/chrootDebian${NC}"
             fi ;;
         10) echo -e "${C_GREEN}Starting Hermes Gateway in background...${NC}"
+            # Quick pre-flight checks
             if ! su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'test -f /home/ruusian/.hermes/hermes-agent/venv/bin/hermes'" 2>/dev/null; then
                 echo -e "${C_RED}Hermes not installed. Run setup inside the chroot first.${NC}"
             elif su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -f hermes.*gateway.run' 2>/dev/null | head -1" | grep -q .; then
@@ -104,7 +117,7 @@ while true; do
                 nohup su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd; nohup /home/ruusian/.hermes/hermes-agent/venv/bin/hermes gateway run > /home/ruusian/.hermes/logs/gateway.log 2>&1 &'" > /dev/null 2>&1 &
                 sleep 1
                 if su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -f hermes.*gateway.run' 2>/dev/null | head -1" | grep -q .; then
-                    echo -e "${C_GREEN}Gateway started. Login as ruusian [9] and use 'hermes' for interactive chat.${NC}"
+                    echo -e "${C_GREEN}Gateway started (PID $(su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -f hermes.*gateway.run' 2>/dev/null" | head -1)). Login as ruusian [9] and use 'hermes' for interactive chat.${NC}"
                 else
                     echo -e "${C_RED}Gateway failed to start. Check /home/ruusian/.hermes/logs/gateway.log inside chroot.${NC}"
                 fi
