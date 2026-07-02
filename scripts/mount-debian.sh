@@ -34,8 +34,11 @@ su -c "
     }
 
     # Ensure internal directories exist
-    mkdir -p $DEBIANPATH/dev $DEBIANPATH/proc $DEBIANPATH/sys $DEBIANPATH/system $DEBIANPATH/vendor $DEBIANPATH/apex $DEBIANPATH/linkerconfig $DEBIANPATH/sdcard $DEBIANPATH/data/data/com.termux/files/usr $DEBIANPATH/tmp $DEBIANPATH/run $DEBIANPATH/var/lock
-    mkdir -p $DEBIANPATH/dev/shm $DEBIANPATH/dev/pts
+    mkdir -p $DEBIANPATH/dev $DEBIANPATH/proc $DEBIANPATH/sys $DEBIANPATH/system $DEBIANPATH/vendor $DEBIANPATH/apex $DEBIANPATH/linkerconfig $DEBIANPATH/sdcard $DEBIANPATH/data/data/com.termux/files/usr $DEBIANPATH/tmp $DEBIANPATH/run
+    # /var/lock is a symlink to /run/lock inside the chroot — replace with a real
+    # dir so tmpfs can mount on it (mount doesn't follow symlinks)
+    rm -f $DEBIANPATH/var/lock
+    mkdir -p $DEBIANPATH/var/lock $DEBIANPATH/dev/shm $DEBIANPATH/dev/pts
     
     domount /dev $DEBIANPATH/dev
     domount /proc $DEBIANPATH/proc
