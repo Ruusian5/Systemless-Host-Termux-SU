@@ -10,7 +10,6 @@ TERMUX_TMP="/data/data/com.termux/files/usr/tmp"
 # Helper for graceful process termination
 terminate_process() {
     local pattern=$1
-    # Use exact binary name matching, avoid matching our own script
     if pidof "$pattern" >/dev/null 2>&1; then
         killall -15 "$pattern" 2>/dev/null || true
         sleep 1
@@ -25,7 +24,6 @@ su -c "setenforce 0" 2>/dev/null || echo -e "\e[1;33m[!] SELinux check failed (N
 
 terminate_process "termux-x11"
 terminate_process "pulseaudio"
-# virgl_test_server_android and clipboard are new processes, no need to kill
 
 # Clean stale locks
 rm -rf "$TERMUX_TMP"/.X0-lock "$TERMUX_TMP"/.X11-unix/X0 2>/dev/null
@@ -64,6 +62,11 @@ while [ ! -S "$TERMUX_TMP/.X11-unix/X0" ]; do
     ((COUNT++))
     if [ $COUNT -ge 40 ]; then
         echo -e "\e[1;31m[!] Display Server timeout. Check x11_server.log\e[0m"
+        # Rollback: kill services we started so we don't leave orphans
+        echo -e "\e[1;33m[~] Rolling back started services...\e[0m"
+        terminate_process "pulseaudio"
+        pkill -f virgl_test_server_android 2>/dev/null || true
+        kill %1 %2 %3 2>/dev/null || true
         exit 1
     fi
 done
