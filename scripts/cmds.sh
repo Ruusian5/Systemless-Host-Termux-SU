@@ -126,6 +126,7 @@ while true; do
         12) BACKUP_FILE="/sdcard/debian-backup-manual-$(date +%Y%m%d_%H%M%S).tar"
             echo -e "${C_GREEN}Creating backup (chroot OS only, excluding bind-mounts)...${NC}"
             su -c "/data/data/com.termux/files/usr/bin/tar \
+              --warning=no-file-changed \
               --exclude='dev/*' --exclude='proc/*' --exclude='sys/*' \
               --exclude='system/*' --exclude='vendor/*' --exclude='apex/*' --exclude='linkerconfig/*' \
               --exclude='sdcard/*' \
