@@ -20,7 +20,7 @@ echo -e "${NC}"
 
 while true; do
     # Check chroot status (actual bind mounts, not just directory presence)
-    if su -c "grep -q 'chrootDebian /dev' /proc/mounts" 2>/dev/null; then
+    if su -c "grep -q '/data/local/tmp/chrootDebian/dev ' /proc/mounts" 2>/dev/null; then
         CHROOT_STATUS="${C_GREEN}● Mounted${NC}"
     elif su -c "test -d /data/local/tmp/chrootDebian/usr/bin" 2>/dev/null; then
         CHROOT_STATUS="${C_ORANGE}○ Unmounted (dir only)${NC}"
