@@ -124,8 +124,14 @@ while true; do
                 fi
             fi ;;
         12) BACKUP_FILE="/sdcard/debian-backup-manual-$(date +%Y%m%d_%H%M%S).tar"
-            echo -e "${C_GREEN}Creating backup (excluding /dev, /proc, /sys)...${NC}"
-            su -c "/data/data/com.termux/files/usr/bin/tar --exclude='dev/*' --exclude='proc/*' --exclude='sys/*' -cf \"$BACKUP_FILE\" -C /data/local/tmp chrootDebian" 2>&1 && echo -e "${C_GREEN}Backup saved: $BACKUP_FILE${NC}" || echo -e "${C_RED}Backup failed${NC}" ;;
+            echo -e "${C_GREEN}Creating backup (chroot OS only, excluding bind-mounts)...${NC}"
+            su -c "/data/data/com.termux/files/usr/bin/tar \
+              --exclude='dev/*' --exclude='proc/*' --exclude='sys/*' \
+              --exclude='system/*' --exclude='vendor/*' --exclude='apex/*' --exclude='linkerconfig/*' \
+              --exclude='sdcard/*' \
+              --exclude='data/data/com.termux/*' \
+              --exclude='tmp/*' \
+              -cf \"$BACKUP_FILE\" -C /data/local/tmp chrootDebian" 2>&1 && echo -e "${C_GREEN}Backup saved: $BACKUP_FILE${NC}" || echo -e "${C_RED}Backup failed (see errors above)${NC}" ;;
         13) bash ~/clipboard-sync.sh & ;;
         14) su -c "sync && echo 3 > /proc/sys/vm/drop_caches" 2>/dev/null && echo "Cache cleared";;
         15) bash ~/cleanup.sh ;;
