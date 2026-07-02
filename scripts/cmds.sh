@@ -59,12 +59,12 @@ while true; do
     echo ""
     echo -e "${C_BOLD}${C_PURPLE}─── Shell Access ───${NC}"
     echo -e "  ${C_PURPLE}[8]${NC}  Login as root         ${C_PURPLE}[9]${NC}  Login as ruusian"
-    echo -e "  ${C_PURPLE}[10]${NC} Hermes Gateway        ${C_PURPLE}[11]${NC} Start Hermes (sudo)"
+    echo -e "  ${C_PURPLE}[10]${NC} Hermes Gateway"
     echo ""
     echo -e "${C_BOLD}${C_ORANGE}─── Utilities ───${NC}"
-    echo -e "  ${C_ORANGE}[12]${NC} Backup Chroot         ${C_ORANGE}[13]${NC} Clipboard Sync"
-    echo -e "  ${C_ORANGE}[14]${NC} Clear System Cache    ${C_ORANGE}[15]${NC} Cleanup System"
-    echo -e "  ${C_ORANGE}[16]${NC} Log Cleanup           ${C_ORANGE}[r]${NC}  Refresh Status"
+    echo -e "  ${C_ORANGE}[11]${NC} Backup Chroot         ${C_ORANGE}[12]${NC} Clipboard Sync"
+    echo -e "  ${C_ORANGE}[13]${NC} Clear System Cache    ${C_ORANGE}[14]${NC} Cleanup System"
+    echo -e "  ${C_ORANGE}[15]${NC} Log Cleanup           ${C_ORANGE}[r]${NC}  Refresh Status"
     echo ""
     echo -e "  ${C_RED}[q]${NC}  Quit Dashboard"
     echo ""
@@ -108,35 +108,27 @@ while true; do
                 echo -e "${C_RED}Chroot not found at /data/local/tmp/chrootDebian${NC}"
             fi ;;
         10) echo -e "${C_GREEN}Starting Hermes Gateway in background...${NC}"
-            # Quick pre-flight checks
+            # Pre-flight checks
             if ! su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'test -f /home/ruusian/.hermes/hermes-agent/venv/bin/hermes'" 2>/dev/null; then
-                echo -e "${C_RED}Hermes not installed. Run setup inside the chroot first.${NC}"
-            elif su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -f hermes.*gateway.run' 2>/dev/null | head -1" | grep -q .; then
-                echo -e "${C_ORANGE}Hermes Gateway is already running.${NC}"
+                echo -e "${C_RED}Hermes not installed. Run 'hermes setup' inside the chroot first.${NC}"
+            elif su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -x hermes 2>/dev/null | head -1'" 2>/dev/null | grep -q .; then
+                echo -e "${C_ORANGE}Hermes is already running.${NC}"
             else
-                nohup su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd; nohup /home/ruusian/.hermes/hermes-agent/venv/bin/hermes gateway run > /home/ruusian/.hermes/logs/gateway.log 2>&1 &'" > /dev/null 2>&1 &
-                sleep 1
-                if su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -f hermes.*gateway.run' 2>/dev/null | head -1" | grep -q .; then
-                    echo -e "${C_GREEN}Gateway started (PID $(su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -f hermes.*gateway.run' 2>/dev/null" | head -1)). Login as ruusian [9] and use 'hermes' for interactive chat.${NC}"
+                nohup su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; nohup /home/ruusian/.hermes/hermes-agent/venv/bin/hermes gateway run > /home/ruusian/.hermes/logs/gateway.log 2>&1 &'" > /dev/null 2>&1 &
+                # Verify start with retry (up to 6s)
+                sleep 3
+                if su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -x hermes 2>/dev/null'" 2>/dev/null | grep -q .; then
+                    echo -e "${C_GREEN}Gateway started. Login as ruusian [9] and use 'hermes' for interactive chat.${NC}"
                 else
-                    echo -e "${C_RED}Gateway failed to start. Check /home/ruusian/.hermes/logs/gateway.log inside chroot.${NC}"
+                    sleep 3
+                    if su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -x hermes 2>/dev/null'" 2>/dev/null | grep -q .; then
+                        echo -e "${C_GREEN}Gateway started. Login as ruusian [9] and use 'hermes' for interactive chat.${NC}"
+                    else
+                        echo -e "${C_RED}Gateway failed to start. Check /home/ruusian/.hermes/logs/gateway.log inside chroot.${NC}"
+                    fi
                 fi
             fi ;;
-        11) echo -e "${C_GREEN}Starting Hermes Gateway with sudo in background...${NC}"
-            if ! su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'test -f /home/ruusian/.hermes/hermes-agent/venv/bin/hermes'" 2>/dev/null; then
-                echo -e "${C_RED}Hermes not installed. Run setup inside the chroot first.${NC}"
-            elif su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -f hermes.*gateway.run' 2>/dev/null | head -1" | grep -q .; then
-                echo -e "${C_ORANGE}Hermes Gateway is already running.${NC}"
-            else
-                nohup su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd; sudo nohup /home/ruusian/.hermes/hermes-agent/venv/bin/hermes gateway run > /home/ruusian/.hermes/logs/gateway.log 2>&1 &'" > /dev/null 2>&1 &
-                sleep 1
-                if su -c "busybox chroot /data/local/tmp/chrootDebian /bin/su - ruusian -c 'pgrep -f hermes.*gateway.run' 2>/dev/null | head -1" | grep -q .; then
-                    echo -e "${C_GREEN}Gateway started (sudo). Login as ruusian [9] and use 'hermes' for interactive chat.${NC}"
-                else
-                    echo -e "${C_RED}Gateway failed to start. Check /home/ruusian/.hermes/logs/gateway.log inside chroot.${NC}"
-                fi
-            fi ;;
-        12) BACKUP_FILE="/sdcard/debian-backup-manual-$(date +%Y%m%d_%H%M%S).tar"
+        11) BACKUP_FILE="/sdcard/debian-backup-manual-$(date +%Y%m%d_%H%M%S).tar"
             echo -e "${C_GREEN}Creating backup (chroot OS only, excluding bind-mounts)...${NC}"
             su -c "/data/data/com.termux/files/usr/bin/tar \
               --warning=no-file-changed \
@@ -146,10 +138,10 @@ while true; do
               --exclude='data/data/com.termux/*' \
               --exclude='tmp/*' \
               -cf \"$BACKUP_FILE\" -C /data/local/tmp chrootDebian" 2>&1 && echo -e "${C_GREEN}Backup saved: $BACKUP_FILE${NC}" || echo -e "${C_RED}Backup failed (see errors above)${NC}" ;;
-        13) bash ~/clipboard-sync.sh & ;;
-        14) su -c "sync && echo 3 > /proc/sys/vm/drop_caches" 2>/dev/null && echo "Cache cleared";;
-        15) bash ~/cleanup.sh ;;
-        16) su -c "busybox chroot /data/local/tmp/chrootDebian /usr/local/bin/log-cleanup.sh" ;;
+        12) bash ~/clipboard-sync.sh & ;;
+        13) su -c "sync && echo 3 > /proc/sys/vm/drop_caches" 2>/dev/null && echo "Cache cleared";;
+        14) bash ~/cleanup.sh ;;
+        15) su -c "busybox chroot /data/local/tmp/chrootDebian /usr/local/bin/log-cleanup.sh" ;;
         r|R) clear ;;
         q|Q) echo -e "${C_GREEN}Goodbye!${NC}"; exit 0 ;;
         *) echo -e "${C_RED}Invalid option${NC}"; sleep 1 ;;
