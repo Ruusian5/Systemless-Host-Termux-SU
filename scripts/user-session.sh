@@ -1,18 +1,15 @@
 #!/bin/bash
-# --- USER SESSION INITIALIZER (v3.0) ---
+# --- USER SESSION INITIALIZER (v3.1) ---
 # Full XFCE desktop: xfwm4 + xfdesktop + xfce4-panel + whisker menu
-# Uses /tmp/.gui-null instead of /dev/null (ruusian can't write /dev/null)
+# GPU: virgl HW acceleration (set by /etc/profile.d/99-hardware-acceleration.sh)
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 GUI_NULL=/tmp/.gui-null; touch "$GUI_NULL"
 export DISPLAY=:0
 export SESSION_MANAGER=localhost
-
-# GPU — software default, HW via hwrun helper
-export LIBGL_ALWAYS_SOFTWARE=true
-export GALLIUM_DRIVER=llvmpipe
 export LIBGL_DRIVERS_PATH=/usr/lib/aarch64-linux-gnu/dri
 
+# GPU config from profile (sets GALLIUM_DRIVER=virpipe for HW acceleration)
 if [ -f /etc/profile.d/99-hardware-acceleration.sh ]; then
     . /etc/profile.d/99-hardware-acceleration.sh
 fi
@@ -32,12 +29,14 @@ done
 
 # ── Disable CPU-hog dbus services ─────────────────────
 mkdir -p /home/ruusian/.local/share/dbus-1/services
+shopt -s nullglob
 for f in /usr/share/dbus-1/services/org.gtk.vfs*.service; do
   echo "disabled" > /home/ruusian/.local/share/dbus-1/services/$(basename $f)
 done
 for f in /usr/share/dbus-1/services/org.xfce.tumbler*.service; do
   echo "disabled" > /home/ruusian/.local/share/dbus-1/services/$(basename $f)
 done
+shopt -u nullglob
 
 # ── Theme (dark modern) ────────────────────────────────
 mkdir -p /home/ruusian/.config/gtk-3.0
@@ -113,8 +112,7 @@ PANELCFG
 /usr/bin/xfce4-panel > "$GUI_NULL" 2>&1 &
 PANEL_PID=$!
 
-# ── Power manager & notifications ─────────────────────
-/usr/bin/xfce4-power-manager > "$GUI_NULL" 2>&1 &
+# ── Notifications (power manager skipped — kills display on mobile) ──
 /usr/bin/xfce4-notifyd > "$GUI_NULL" 2>&1 &
 
 # ── Background watchdog for CPU hogs ──────────────────
@@ -123,6 +121,8 @@ PANEL_PID=$!
     pkill -9 -x "gvfsd" 2>/dev/null
     pkill -9 -x "tumblerd" 2>/dev/null
     pkill -9 -x "gvfsd-metadata" 2>/dev/null
+    # xfce4-power-manager can blank X11 display on mobile
+    pkill -9 -x "xfce4-power-manager" 2>/dev/null
   done
 ) &
 WATCHDOG_PID=$!

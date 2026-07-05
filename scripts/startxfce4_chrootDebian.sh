@@ -115,7 +115,7 @@ echo -e "${C_GREEN}[✓] Graphics Bridge Established.${NC}"
 
 # ── 5. LAUNCH DESKTOP ───────────────────────────────────────────────
 echo -e "${C_PINK}[🚀] Starting XFCE desktop session inside Debian chroot...${NC}"
-nohup su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/local/bin/v2-launch.sh" > /dev/null 2>&1 &
+nohup su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/env -i DISPLAY=:0 XDG_RUNTIME_DIR=/tmp HOME=/home/ruusian TERM=xterm PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /usr/local/bin/v2-launch.sh" > /dev/null 2>&1 &
 disown
 
 echo ""

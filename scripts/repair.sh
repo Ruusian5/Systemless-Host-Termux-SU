@@ -44,7 +44,11 @@ fi
 # 3. Storage & Kernel Optimization
 echo -e "\n${C_BOLD}[3/5] Optimizing Storage & Kernel...${NC}"
 su -c "$BUSYBOX fstrim -v /data" 2>/dev/null || echo -e "  [!] fstrim failed or not supported."
+
+# Apply Swappiness fix (harmless if fails)
 su -c "echo 10 > /proc/sys/vm/swappiness" 2>/dev/null && echo -e "  [✓] Swappiness tuned (10)." || true
+
+# Apply CPU Governor fix (harmless if fails)
 su -c "for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done" 2>/dev/null && echo -e "  [✓] All Cores set to PERFORMANCE." || true
 
 # 4. Memory Flush

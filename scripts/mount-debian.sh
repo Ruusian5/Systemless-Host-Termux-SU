@@ -42,8 +42,9 @@ su -c "
         rm -rf $DEBIANPATH/var/lock
         mkdir -p $DEBIANPATH/var/lock
     fi
-    mkdir -p $DEBIANPATH/dev/shm $DEBIANPATH/dev/pts
-    
+    # Don't create dev/shm here — /dev bind-mount below would hide it
+    mkdir -p $DEBIANPATH/dev/pts
+
     domount /dev $DEBIANPATH/dev
     domount /proc $DEBIANPATH/proc
     domount /sys $DEBIANPATH/sys
@@ -55,17 +56,25 @@ su -c "
     domount /sdcard $DEBIANPATH/sdcard
     domount /data/data/com.termux/files/usr $DEBIANPATH/data/data/com.termux/files/usr
     domount /data/data/com.termux/files/usr/tmp $DEBIANPATH/tmp
+    # X11 socket — bind mount if host has it (Termux tmp shared via /tmp bind mount above)
+    mkdir -p $DEBIANPATH/tmp/.X11-unix 2>/dev/null || true
+    if [ -d /tmp/.X11-unix ]; then
+      domount /tmp/.X11-unix $DEBIANPATH/tmp/.X11-unix
+    fi
 
-    # Mount tmpfs components
+    # Mount tmpfs components (dev/shm AFTER /dev bind mount so target exists)
+    mkdir -p $DEBIANPATH/dev/shm 2>/dev/null || true
     dotmpfs tmpfs $DEBIANPATH/dev/shm rw,nosuid,nodev,noatime
     dotmpfs tmpfs $DEBIANPATH/run rw,mode=1777,noatime
     dotmpfs tmpfs $DEBIANPATH/var/lock rw,mode=1777,noatime
 
     # Permissions
-    RUUSIAN_UID=$(/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/id -u ruusian 2>/dev/null || echo 1001)
-    mkdir -p $DEBIANPATH/run/user/$RUUSIAN_UID
-    chown $RUUSIAN_UID:$RUUSIAN_UID $DEBIANPATH/run/user/$RUUSIAN_UID
-    chmod 777 $DEBIANPATH/run/user/$RUUSIAN_UID
+    # NOTE: \$RUUSIAN_UID is escaped so the parent shell doesn't expand it —
+    # it's defined INSIDE the su block and must not be pre-expanded.
+    RUUSIAN_UID=\$(/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/id -u ruusian 2>/dev/null || echo 1000)
+    mkdir -p $DEBIANPATH/run/user/\$RUUSIAN_UID
+    chown \$RUUSIAN_UID:\$RUUSIAN_UID $DEBIANPATH/run/user/\$RUUSIAN_UID
+    chmod 777 $DEBIANPATH/run/user/\$RUUSIAN_UID
     chmod 666 /dev/kgsl-3d0 /dev/dri/* /dev/video* /dev/ion /dev/adsp* /dev/adsprpc* 2>/dev/null || true
 "
 
