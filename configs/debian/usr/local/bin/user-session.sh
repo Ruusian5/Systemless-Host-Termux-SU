@@ -1,16 +1,18 @@
 #!/bin/bash
-# --- USER SESSION INITIALIZER (v3.0) ---
+# --- USER SESSION INITIALIZER (v3.2) ---
 # Full XFCE desktop: xfwm4 + xfdesktop + xfce4-panel + whisker menu
-# Uses /tmp/.gui-null instead of /dev/null (ruusian can't write /dev/null)
+# GPU: virgl HW acceleration (set by /etc/profile.d/99-hardware-acceleration.sh)
+
+if pgrep -x "xfwm4" >/dev/null; then
+    echo "An active XFCE session (xfwm4) is already running."
+    echo "Exiting user-session.sh to prevent duplicate processes."
+    exit 1
+fi
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 GUI_NULL=/tmp/.gui-null; touch "$GUI_NULL"
 export DISPLAY=:0
 export SESSION_MANAGER=localhost
-
-# GPU — software default, HW via hwrun helper
-export LIBGL_ALWAYS_SOFTWARE=true
-export GALLIUM_DRIVER=llvmpipe
 export LIBGL_DRIVERS_PATH=/usr/lib/aarch64-linux-gnu/dri
 
 if [ -f /etc/profile.d/99-hardware-acceleration.sh ]; then
@@ -25,21 +27,20 @@ export $(dbus-launch)
 export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SESSION_BUS_PID
 
-# ── Kill CPU hogs ─────────────────────────────────────
 for p in gvfsd tumblerd gvfsd-metadata gvfs-io xfce4-panel; do
   pkill -9 -x "$p" 2>/dev/null
 done
 
-# ── Disable CPU-hog dbus services ─────────────────────
 mkdir -p /home/ruusian/.local/share/dbus-1/services
+shopt -s nullglob
 for f in /usr/share/dbus-1/services/org.gtk.vfs*.service; do
   echo "disabled" > /home/ruusian/.local/share/dbus-1/services/$(basename $f)
 done
 for f in /usr/share/dbus-1/services/org.xfce.tumbler*.service; do
   echo "disabled" > /home/ruusian/.local/share/dbus-1/services/$(basename $f)
 done
+shopt -u nullglob
 
-# ── Theme (dark modern) ────────────────────────────────
 mkdir -p /home/ruusian/.config/gtk-3.0
 cat > /home/ruusian/.config/gtk-3.0/settings.ini << 'GTKEOF'
 [Settings]
@@ -50,7 +51,6 @@ gtk-enable-event-sounds=0
 gtk-enable-input-feedback-sounds=0
 GTKEOF
 
-# ── Start XFCE desktop components ─────────────────────
 echo "Starting XFCE desktop (xfce4-panel + whiskermenu)..." > /home/ruusian/session_debug.log
 
 xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false 2>/dev/null
@@ -59,11 +59,11 @@ xfconf-query -c xsettings -p /Net/IconThemeName -s "Papirus-Dark" 2>/dev/null ||
 xfconf-query -c xsettings -p /Net/ThemeName -s "Adwaita-dark" 2>/dev/null || true
 
 /usr/bin/xfsettingsd --daemon > "$GUI_NULL" 2>&1 &
+sleep 0.5
 /usr/bin/xfwm4 --compositor=off --replace > "$GUI_NULL" 2>&1 &
 sleep 1
 /usr/bin/xfdesktop > "$GUI_NULL" 2>&1 &
 
-# ── Wallpaper ──────────────────────────────────────────
 if command -v feh &>/dev/null; then
   for bg in /usr/share/backgrounds/xfce/xfce-teal.jpg \
             /usr/share/backgrounds/xfce/xfce-blue.jpg \
@@ -72,7 +72,6 @@ if command -v feh &>/dev/null; then
   done
 fi
 
-# ── XFCE Panel (replaces tint2) ───────────────────────
 mkdir -p /home/ruusian/.config/xfce4/panel
 mkdir -p /home/ruusian/.config/xfce4/xfconf/xfce-perchannel-xml
 
@@ -113,20 +112,26 @@ PANELCFG
 /usr/bin/xfce4-panel > "$GUI_NULL" 2>&1 &
 PANEL_PID=$!
 
-# ── Power manager & notifications ─────────────────────
-/usr/bin/xfce4-power-manager > "$GUI_NULL" 2>&1 &
 /usr/bin/xfce4-notifyd > "$GUI_NULL" 2>&1 &
 
-# ── Background watchdog for CPU hogs ──────────────────
 (
-  while true; do sleep 5
+  while true; do sleep 30
     pkill -9 -x "gvfsd" 2>/dev/null
     pkill -9 -x "tumblerd" 2>/dev/null
     pkill -9 -x "gvfsd-metadata" 2>/dev/null
+    pkill -9 -x "xfce4-power-manager" 2>/dev/null
   done
 ) &
 WATCHDOG_PID=$!
 
-echo "=== Full XFCE Desktop Ready (xfce4-panel + whiskermenu) ===" >> /home/ruusian/session_debug.log
+sleep 2
+for _comp in xfwm4 xfsettingsd xfdesktop xfce4-panel; do
+    if pgrep -x "$_comp" >/dev/null 2>&1; then
+        echo "  + $_comp running" >> /home/ruusian/session_debug.log
+    else
+        echo "  - $_comp FAILED" >> /home/ruusian/session_debug.log
+    fi
+done
+echo "=== Full XFCE Desktop Ready ===" >> /home/ruusian/session_debug.log
 
 while true; do sleep 3600; done

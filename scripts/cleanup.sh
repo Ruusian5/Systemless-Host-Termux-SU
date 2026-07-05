@@ -8,5 +8,5 @@ if command -v truncate >/dev/null 2>&1; then
 else
     echo "Truncating session logs..." && : > /data/local/tmp/chrootDebian/home/ruusian/session_debug.log 2>/dev/null || true
 fi
-echo "Cleaning APT cache..." && su -c 'busybox chroot /data/local/tmp/chrootDebian apt-get clean' 2>/dev/null || true
+echo "Cleaning APT cache..." && su -c '/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian apt-get clean' 2>/dev/null || true
 echo "Done"

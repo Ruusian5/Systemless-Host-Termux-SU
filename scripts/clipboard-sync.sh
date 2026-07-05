@@ -6,15 +6,15 @@
 DEBIANPATH="/data/local/tmp/chrootDebian"
 PIDFILE="/data/data/com.termux/files/usr/tmp/clipboard-sync.pid"
 
-if [ -f "$PIDFILE" ]; then
+set -o noclobber
+if ! echo $$ > "$PIDFILE" 2>/dev/null; then
     OLD_PID=$(cat "$PIDFILE" 2>/dev/null)
     if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-        echo "Already running (PID $OLD_PID)" >> /dev/null
         exit 0
     fi
-    rm -f "$PIDFILE"
+    rm -f "$PIDFILE" && echo $$ > "$PIDFILE"
 fi
-echo $$ > "$PIDFILE"
+set +o noclobber
 trap "rm -f $PIDFILE" EXIT
 
 export DISPLAY=:0
@@ -41,17 +41,21 @@ su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/e
 
 LAST_TERMUX=$(termux-clipboard-get 2>/dev/null)
 LAST_X11=$(_xclip -o -selection clipboard)
+_IT=0
 while true; do
+    _IT=$(( (_IT + 1) % 3 ))
     CUR_TERMUX=$(termux-clipboard-get 2>/dev/null)
     if [ "$CUR_TERMUX" != "$LAST_TERMUX" ] && [ -n "$CUR_TERMUX" ]; then
         echo -n "$CUR_TERMUX" | _xclip_in -selection clipboard
         echo -n "$CUR_TERMUX" | _xclip_in -selection primary
-        LAST_TERMUX="$CUR_TERMUX"; LAST_X11="$CUR_TERMUX"; sleep 1; continue
+        LAST_TERMUX="$CUR_TERMUX"; LAST_X11="$CUR_TERMUX"
     fi
-    CUR_X11=$(_xclip -o -selection clipboard)
-    if [ "$CUR_X11" != "$LAST_X11" ] && [ -n "$CUR_X11" ]; then
-        termux-clipboard-set "$CUR_X11" 2>/dev/null
-        LAST_X11="$CUR_X11"; LAST_TERMUX="$CUR_X11"; sleep 1; continue
+    if [ $_IT -eq 0 ]; then
+        CUR_X11=$(_xclip -o -selection clipboard)
+        if [ "$CUR_X11" != "$LAST_X11" ] && [ -n "$CUR_X11" ]; then
+            termux-clipboard-set "$CUR_X11" 2>/dev/null
+            LAST_X11="$CUR_X11"; LAST_TERMUX="$CUR_X11"
+        fi
     fi
     sleep 1
 done

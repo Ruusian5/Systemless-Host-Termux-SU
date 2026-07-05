@@ -19,7 +19,7 @@ echo -e "${C_BOLD}${C_CYAN}[Repair Tool v0.1]${NC} Initiating Workstation Scan..
 
 # 1. Debian Health Check
 echo -e "\n${C_BOLD}[1/5] Auditing Debian Package Health...${NC}"
-if su -c "$BUSYBOX chroot $DEBIANPATH /usr/bin/sh -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; dpkg --configure -a && apt-get install -f -y'" 2>/dev/null; then
+if su -c "$BUSYBOX chroot $DEBIANPATH /usr/bin/sh -c 'export DEBIAN_FRONTEND=noninteractive PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; dpkg --configure -a && apt-get install -f -y'" 2>/dev/null; then
     echo -e "  [✓] Packages verified."
 else
     echo -e "  ${C_ORANGE}[!] Debian health check had warnings (dpkg/apt).${NC}"

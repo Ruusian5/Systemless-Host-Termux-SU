@@ -47,7 +47,7 @@ fi
 echo -ne "  [3/6] Inspecting Guest Vulkan Stack... "
 su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/sh -c '
     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    if strings /usr/lib/aarch64-linux-gnu/libvulkan_freedreno.so | grep -q kgsl 2>/dev/null; then
+    if grep -a kgsl /usr/lib/aarch64-linux-gnu/libvulkan_freedreno.so 2>/dev/null | grep -q kgsl; then
         exit 0
     else
         exit 1
@@ -67,10 +67,14 @@ done
 # 5. Runtime Acceleration Test
 echo -e "  [5/6] Performing Acceleration Handshake..."
 if [ -S "$TERMUX_TMP/.X11-unix/X0" ]; then
-    if su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/su - ruusian -c 'export DISPLAY=:0 XDG_RUNTIME_DIR=/run/user/1000 GALLIUM_DRIVER=virgl; timeout 5s eglinfo >/dev/null 2>&1'" 2>/dev/null; then
-        echo -e "      - EGL Handshake: ${C_GREEN}SUCCESS${NC}"
+    if su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/sh -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; which eglinfo'" 2>/dev/null; then
+        if su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/su - ruusian -c 'export DISPLAY=:0 XDG_RUNTIME_DIR=/run/user/1000 GALLIUM_DRIVER=virgl; timeout 5s eglinfo >/dev/null 2>&1'" 2>/dev/null; then
+            echo -e "      - EGL Handshake: ${C_GREEN}SUCCESS${NC}"
+        else
+            echo -e "      - EGL Handshake: ${C_RED}FAILED${NC} (Check X11/VirGL logs)"
+        fi
     else
-        echo -e "      - EGL Handshake: ${C_RED}FAILED${NC} (Check X11/VirGL logs)"
+        echo -e "      - EGL Handshake: ${C_ORANGE}SKIPPED${NC} (eglinfo not installed in chroot)"
     fi
 else
     echo -e "      - EGL Handshake: ${C_ORANGE}SKIPPED${NC} (X11 not running)"

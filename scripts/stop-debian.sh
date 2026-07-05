@@ -50,6 +50,9 @@ pkill -9 socat 2>/dev/null || true
 pkill -f clipboard-sync.sh 2>/dev/null || true
 pkill -f virgl_test_server_android 2>/dev/null || true
 
+# Clean up stale X11 socket and lock files
+rm -f /data/data/com.termux/files/usr/tmp/.X0-lock /data/data/com.termux/files/usr/tmp/.X11-unix/X0 2>/dev/null || true
+
 # Clean up clipboard-sync PID file
 rm -f /data/data/com.termux/files/usr/tmp/clipboard-sync.pid 2>/dev/null
 
@@ -57,6 +60,26 @@ if [ $kill_count -gt 0 ]; then
     echo -e "  ${C_GREEN}[✓] $kill_count process(es) stopped${NC}"
 else
     echo -e "  ${C_YELLOW}[~] No processes needed stopping${NC}"
+fi
+
+# ── 3.5 KILL ALL CHROOT PROCESSES ──────────────────────────────────
+echo -e "${C_YELLOW}[→] Scanning for processes inside chroot...${NC}"
+CHROOT_PIDS=$(su -c "ls -l /proc/*/root 2>/dev/null" | grep "$DEBIANPATH" | awk -F'/' '{print $3}')
+if [ -n "$CHROOT_PIDS" ]; then
+    PIDS_TO_KILL=$(echo "$CHROOT_PIDS" | grep -E '^[0-9]+$' | tr '\n' ' ')
+    if [ -n "$PIDS_TO_KILL" ]; then
+        echo -e "  ${C_YELLOW}[~] Sending SIGTERM to $PIDS_TO_KILL${NC}"
+        su -c "kill -15 $PIDS_TO_KILL" 2>/dev/null || true
+        sleep 1.5
+        CHROOT_PIDS_REM=$(su -c "ls -l /proc/*/root 2>/dev/null" | grep "$DEBIANPATH" | awk -F'/' '{print $3}' | grep -E '^[0-9]+$' | tr '\n' ' ')
+        if [ -n "$CHROOT_PIDS_REM" ]; then
+            echo -e "  ${C_RED}[!] Force-killing remaining: $CHROOT_PIDS_REM${NC}"
+            su -c "kill -9 $CHROOT_PIDS_REM" 2>/dev/null || true
+        fi
+        echo -e "  ${C_GREEN}[✓] All chroot processes terminated${NC}"
+    fi
+else
+    echo -e "  ${C_GREEN}[✓] No processes inside chroot${NC}"
 fi
 
 # ── 4. LOG ROTATION ─────────────────────────────────────────────────

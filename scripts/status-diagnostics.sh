@@ -38,7 +38,11 @@ else
 fi
 
 if [ -S "$TERMUX_TMP/.virgl_test" ]; then
-    echo -e "VirGL: ${C_GREEN}socket ready${NC}"
+    if pgrep -f virgl_test_server_android >/dev/null 2>&1; then
+        echo -e "VirGL: ${C_GREEN}running (socket + process)${NC}"
+    else
+        echo -e "VirGL: ${C_ORANGE}stale socket (no process)${NC}"
+    fi
 else
     echo -e "VirGL: ${C_ORANGE}inactive${NC}"
 fi

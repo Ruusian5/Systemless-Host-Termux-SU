@@ -24,7 +24,7 @@ MISSING=""
 command -v termux-x11 >/dev/null 2>&1 || MISSING="$MISSING termux-x11"
 command -v pulseaudio >/dev/null 2>&1 || MISSING="$MISSING pulseaudio"
 command -v virgl_test_server_android >/dev/null 2>&1 || echo -e "${C_YELLOW}[!] virgl_test_server_android not found — GPU acceleration disabled${NC}"
-command -v am >/dev/null 2>&1 || echo -e "${C_YELLOW}[!] 'am' not found — Termux:X11 app must be opened manually${NC}"
+command -v termux-am >/dev/null 2>&1 || echo -e "${C_YELLOW}[!] termux-am not found — Termux:X11 app must be opened manually${NC}"
 test -f ~/mount-debian.sh || MISSING="$MISSING mount-debian.sh"
 test -f ~/clipboard-sync.sh || MISSING="$MISSING clipboard-sync.sh"
 if [ -n "$MISSING" ]; then
@@ -40,7 +40,15 @@ fi
 # ── 1. KERNEL-LEVEL HANDSHAKE ───────────────────────────────────────
 su -c "setenforce 0" 2>/dev/null || echo -e "${C_YELLOW}[!] SELinux check failed (Non-critical)${NC}"
 
-terminate_process "termux-x11"
+# Skip X11 restart if already healthy
+X_PROC=""; pgrep -f "com.termux.x11" >/dev/null 2>&1 && X_PROC=1
+pgrep -f "termux-x11" >/dev/null 2>&1 && X_PROC=1
+if [ -S "$TERMUX_TMP/.X11-unix/X0" ] && [ -n "$X_PROC" ]; then
+    echo -e "${C_GREEN}[✓] X11 server healthy — skipping restart${NC}"
+else
+    terminate_process "termux-x11"
+fi
+
 terminate_process "pulseaudio"
 
 # Clean stale locks
@@ -69,14 +77,22 @@ fi
 
 # X11 Display Server
 echo -e "${C_GREEN}[+] Launching X11 Display Server...${NC}"
-if am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1; then
+if [ "$(command -v termux-am)" ] && termux-am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1; then
     echo -e "${C_GREEN}  → Termux:X11 app launched${NC}"
+elif [ "$(command -v am)" ] && am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1; then
+    echo -e "${C_GREEN}  → Termux:X11 app launched${NC}"
+elif su -c "am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity" >/dev/null 2>&1; then
+    echo -e "${C_GREEN}  → Termux:X11 app launched via root${NC}"
 else
     echo -e "${C_YELLOW}  → Could not auto-launch Termux:X11 app. Open it manually.${NC}"
 fi
-XDG_RUNTIME_DIR=${TERMUX_TMP} nohup termux-x11 :0 -ac -legacy-drawing -disable-dri3 > "$HOME/x11_server.log" 2>&1 &
-disown
-echo -e "${C_GREEN}  → termux-x11 server starting (log: ~/x11_server.log)${NC}"
+if [ -n "$X_PROC" ] && [ -S "$TERMUX_TMP/.X11-unix/X0" ]; then
+    echo -e "${C_GREEN}  → X11 server already running — reusing${NC}"
+else
+    XDG_RUNTIME_DIR=${TERMUX_TMP} nohup termux-x11 :0 -ac -legacy-drawing -disable-dri3 > "$HOME/x11_server.log" 2>&1 &
+    disown
+    echo -e "${C_GREEN}  → termux-x11 server starting (log: ~/x11_server.log)${NC}"
+fi
 
 # Fix permissions after engines settle
 sleep 2

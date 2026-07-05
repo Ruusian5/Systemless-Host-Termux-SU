@@ -73,7 +73,7 @@ su -c "
     mkdir -p $DEBIANPATH/run/user/\$RUUSIAN_UID
     chown \$RUUSIAN_UID:\$RUUSIAN_UID $DEBIANPATH/run/user/\$RUUSIAN_UID
     chmod 777 $DEBIANPATH/run/user/\$RUUSIAN_UID
-    chmod 666 /dev/kgsl-3d0 /dev/dri/* /dev/video* /dev/ion /dev/adsp* /dev/adsprpc* 2>/dev/null || true
+    chmod 660 /dev/kgsl-3d0 /dev/dri/* /dev/video* /dev/ion /dev/adsp* /dev/adsprpc* 2>/dev/null || true
 "
 
 echo -e "\e[1;32m[✓] All Bridges Verified and Mounted.\e[0m"
