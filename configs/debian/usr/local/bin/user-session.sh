@@ -1,19 +1,20 @@
 #!/bin/bash
-# --- USER SESSION INITIALIZER (v3.2) ---
-# Full XFCE desktop: xfwm4 + xfdesktop + xfce4-panel + whisker menu
-# GPU: virgl HW acceleration (set by /etc/profile.d/99-hardware-acceleration.sh)
+# --- USER SESSION INITIALIZER (v3.3) ---
 
-if pgrep -x "xfwm4" >/dev/null; then
-    echo "An active XFCE session (xfwm4) is already running."
-    echo "Exiting user-session.sh to prevent duplicate processes."
+GUI_NULL=/tmp/.gui-null
+
+if [ -f /tmp/.xfce-session.lock ]; then
+    echo "Session lock present — exiting"
     exit 1
 fi
+echo $$ > /tmp/.xfce-session.lock
+trap "rm -f /tmp/.xfce-session.lock" EXIT
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-GUI_NULL=/tmp/.gui-null; touch "$GUI_NULL"
+touch "$GUI_NULL"
 export DISPLAY=:0
-export SESSION_MANAGER=localhost
 export LIBGL_DRIVERS_PATH=/usr/lib/aarch64-linux-gnu/dri
+unset SESSION_MANAGER
 
 if [ -f /etc/profile.d/99-hardware-acceleration.sh ]; then
     . /etc/profile.d/99-hardware-acceleration.sh
@@ -23,21 +24,23 @@ rm -f "$XDG_RUNTIME_DIR/ICEauthority" 2>/dev/null
 touch "$XDG_RUNTIME_DIR/ICEauthority" 2>/dev/null
 chmod 600 "$XDG_RUNTIME_DIR/ICEauthority" 2>/dev/null
 
-export $(dbus-launch)
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ] || ! pgrep -x dbus-daemon >/dev/null 2>&1; then
+    eval $(dbus-launch --sh-syntax)
+fi
 export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SESSION_BUS_PID
 
-for p in gvfsd tumblerd gvfsd-metadata gvfs-io xfce4-panel; do
+for p in gvfsd tumblerd gvfsd-metadata gvfs-io; do
   pkill -9 -x "$p" 2>/dev/null
 done
 
 mkdir -p /home/ruusian/.local/share/dbus-1/services
 shopt -s nullglob
 for f in /usr/share/dbus-1/services/org.gtk.vfs*.service; do
-  echo "disabled" > /home/ruusian/.local/share/dbus-1/services/$(basename $f)
+  echo "disabled" > "/home/ruusian/.local/share/dbus-1/services/$(basename "$f")"
 done
 for f in /usr/share/dbus-1/services/org.xfce.tumbler*.service; do
-  echo "disabled" > /home/ruusian/.local/share/dbus-1/services/$(basename $f)
+  echo "disabled" > "/home/ruusian/.local/share/dbus-1/services/$(basename "$f")"
 done
 shopt -u nullglob
 
@@ -51,7 +54,7 @@ gtk-enable-event-sounds=0
 gtk-enable-input-feedback-sounds=0
 GTKEOF
 
-echo "Starting XFCE desktop (xfce4-panel + whiskermenu)..." > /home/ruusian/session_debug.log
+echo "Starting XFCE desktop..." > /home/ruusian/session_debug.log
 
 xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false 2>/dev/null
 xfconf-query -c xfwm4 -p /general/theme -s "Adwaita-dark" 2>/dev/null || true
@@ -65,9 +68,7 @@ sleep 1
 /usr/bin/xfdesktop > "$GUI_NULL" 2>&1 &
 
 if command -v feh &>/dev/null; then
-  for bg in /usr/share/backgrounds/xfce/xfce-teal.jpg \
-            /usr/share/backgrounds/xfce/xfce-blue.jpg \
-            /usr/share/backgrounds/xfce/xfce-stripes.png; do
+  for bg in /usr/share/backgrounds/xfce/xfce-teal.jpg /usr/share/backgrounds/xfce/xfce-blue.jpg /usr/share/backgrounds/xfce/xfce-stripes.png; do
     if [ -f "$bg" ]; then feh --bg-fill "$bg" 2>/dev/null; break; fi
   done
 fi
@@ -110,8 +111,6 @@ cat > /home/ruusian/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml << 
 PANELCFG
 
 /usr/bin/xfce4-panel > "$GUI_NULL" 2>&1 &
-PANEL_PID=$!
-
 /usr/bin/xfce4-notifyd > "$GUI_NULL" 2>&1 &
 
 (
@@ -122,7 +121,6 @@ PANEL_PID=$!
     pkill -9 -x "xfce4-power-manager" 2>/dev/null
   done
 ) &
-WATCHDOG_PID=$!
 
 sleep 2
 for _comp in xfwm4 xfsettingsd xfdesktop xfce4-panel; do
