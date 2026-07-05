@@ -53,9 +53,9 @@ while true; do
     echo ""
     echo -e "${C_BOLD}${C_CYAN}─── Quick Actions ───${NC}"
     echo -e "  ${C_GREEN}[1]${NC}  Start GUI Desktop     ${C_GREEN}[2]${NC}  Stop GUI"
-    echo -e "  ${C_GREEN}[3]${NC}  Mount Chroot          ${C_GREEN}[4]${NC}  Repair & Optimize"
-    echo -e "  ${C_GREEN}[5]${NC}  GPU Audit             ${C_GREEN}[6]${NC}  Start PulseAudio"
-    echo -e "  ${C_GREEN}[7]${NC}  Fix Audio"
+    echo -e "  ${C_GREEN}[3]${NC}  Mount Chroot          ${C_GREEN}[4]${NC}  System Repair"
+    echo -e "  ${C_GREEN}[5]${NC}  GPU Audit             ${C_GREEN}[6]${NC}  Audio Restart/Fix"
+    echo -e "  ${C_GREEN}[7]${NC}  Status Diagnostics"
     echo ""
     echo -e "${C_BOLD}${C_PURPLE}─── Shell Access ───${NC}"
     echo -e "  ${C_PURPLE}[8]${NC}  Login as root         ${C_PURPLE}[9]${NC}  Login as ruusian"
@@ -75,12 +75,8 @@ while true; do
         3) bash ~/mount-debian.sh ;;
         4) bash ~/repair.sh ;;
         5) bash ~/gpu-audit.sh ;;
-        6) if pulseaudio --start --load="module-native-protocol-tcp port=4713 auth-anonymous=1 auth-ip-acl=127.0.0.1" --load="module-always-sink" 2>/dev/null; then
-                echo -e "${C_GREEN}PulseAudio started${NC}"
-            else
-                echo -e "${C_ORANGE}PulseAudio already running or failed to start${NC}"
-            fi ;;
-        7) bash ~/fix-audio.sh 2>/dev/null || { pulseaudio --kill 2>/dev/null; rm -f ~/.config/pulse/*-runtime/pid 2>/dev/null; pulseaudio --start --load="module-native-protocol-tcp port=4713 auth-anonymous=1 auth-ip-acl=127.0.0.1" --load="module-always-sink" 2>/dev/null && echo -e "${C_GREEN}PulseAudio restarted${NC}" || echo -e "${C_RED}Fix Audio failed${NC}"; } ;;
+        6) bash ~/fix-audio.sh ;;
+        7) bash ~/status-diagnostics.sh ;;
         8) if su -c "test -d /data/local/tmp/chrootDebian/usr/bin" 2>/dev/null; then
                 # Clean stale X socket if no X process
                 X_PROC=""; pgrep -f "com.termux.x11" >/dev/null 2>&1 && X_PROC=1; pgrep -f "termux-x11" >/dev/null 2>&1 && X_PROC=1

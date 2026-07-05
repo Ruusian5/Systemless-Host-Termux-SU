@@ -56,31 +56,22 @@ su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/s
 
 # 4. Driver Logic Verification
 echo -e "  [4/6] Verifying Guest Driver Paths..."
-su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/sh -c '
-    export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    for d in zink_dri.so virtio_gpu_dri.so kgsl_dri.so swrast_dri.so; do
-        if [ -f /usr/lib/aarch64-linux-gnu/dri/\$d ]; then
-            echo -e \"      - \$d: ${C_GREEN}PRESENT${NC}\"
-        else
-            echo -e \"      - \$d: ${C_RED}MISSING${NC}\"
-        fi
-    done
-'" 2>/dev/null
+for d in zink_dri.so virtio_gpu_dri.so kgsl_dri.so swrast_dri.so; do
+    if su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/sh -c 'test -f /usr/lib/aarch64-linux-gnu/dri/$d'" 2>/dev/null; then
+        echo -e "      - $d: ${C_GREEN}PRESENT${NC}"
+    else
+        echo -e "      - $d: ${C_RED}MISSING${NC}"
+    fi
+done
 
 # 5. Runtime Acceleration Test
 echo -e "  [5/6] Performing Acceleration Handshake..."
 if [ -S "$TERMUX_TMP/.X11-unix/X0" ]; then
-    su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/su - ruusian -c '
-        export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-        export DISPLAY=:0
-        export XDG_RUNTIME_DIR=/run/user/1000
-        export GALLIUM_DRIVER=virgl
-        if timeout 5s eglinfo >/dev/null 2>&1; then
-            echo -e \"      - EGL Handshake: ${C_GREEN}SUCCESS${NC}\"
-        else
-            echo -e \"      - EGL Handshake: ${C_RED}FAILED${NC} (Check X11/VirGL logs)\"
-        fi
-    '" 2>/dev/null || true
+    if su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/su - ruusian -c 'export DISPLAY=:0 XDG_RUNTIME_DIR=/run/user/1000 GALLIUM_DRIVER=virgl; timeout 5s eglinfo >/dev/null 2>&1'" 2>/dev/null; then
+        echo -e "      - EGL Handshake: ${C_GREEN}SUCCESS${NC}"
+    else
+        echo -e "      - EGL Handshake: ${C_RED}FAILED${NC} (Check X11/VirGL logs)"
+    fi
 else
     echo -e "      - EGL Handshake: ${C_ORANGE}SKIPPED${NC} (X11 not running)"
 fi
@@ -90,8 +81,8 @@ echo -e "\n${C_BOLD}${C_CYAN}[Forensic Report Summary]${NC}"
 echo "------------------------------------------------"
 echo "Target: Adreno 640 (KGSL Pipeline)"
 if [ $FAIL -eq 0 ]; then
-    echo "Status: ${C_GREEN}ALL CHECKS PASSED${NC}"
+    echo -e "Status: ${C_GREEN}ALL CHECKS PASSED${NC}"
 else
-    echo "Status: ${C_ORANGE}$FAIL CHECK(S) FAILED${NC}"
+    echo -e "Status: ${C_ORANGE}$FAIL CHECK(S) FAILED${NC}"
 fi
 echo "------------------------------------------------"

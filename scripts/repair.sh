@@ -41,24 +41,17 @@ else
     echo -e "  [~] No X socket found."
 fi
 
-# 3. Storage & Kernel Optimization
-echo -e "\n${C_BOLD}[3/5] Optimizing Storage & Kernel...${NC}"
+# 3. Storage Maintenance
+ echo -e "\n${C_BOLD}[3/5] Checking Storage Trim...${NC}"
 su -c "$BUSYBOX fstrim -v /data" 2>/dev/null || echo -e "  [!] fstrim failed or not supported."
 
-# Apply Swappiness fix (harmless if fails)
-su -c "echo 10 > /proc/sys/vm/swappiness" 2>/dev/null && echo -e "  [✓] Swappiness tuned (10)." || true
-
-# Apply CPU Governor fix (harmless if fails)
-su -c "for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done" 2>/dev/null && echo -e "  [✓] All Cores set to PERFORMANCE." || true
-
-# 4. Memory Flush
-echo -e "\n${C_BOLD}[4/5] Flushing System Cache...${NC}"
-su -c "sync && echo 3 > /proc/sys/vm/drop_caches" 2>/dev/null || true
-echo -e "  [✓] RAM Cache cleared."
+# 4. Runtime Safety Check
+ echo -e "\n${C_BOLD}[4/5] Checking Runtime State...${NC}"
+echo -e "  [✓] Skipped aggressive CPU governor and RAM cache changes."
 
 # 5. Log & Cache Cleanup
 echo -e "\n${C_BOLD}[5/5] Cleaning Large Logs & Guest Cache...${NC}"
-find "$HOME" -name "*.log" -size +5M -exec truncate -s 0 {} \; 2>/dev/null || true
+find "$HOME" -maxdepth 1 -name "*.log" -size +5M -exec truncate -s 0 {} \; 2>/dev/null || true
 su -c "$BUSYBOX chroot $DEBIANPATH /usr/bin/sh -c 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; apt-get clean && rm -rf /var/cache/apt/archives/*'" 2>/dev/null || true
 echo -e "  [✓] Truncated logs and cleared guest APT cache."
 

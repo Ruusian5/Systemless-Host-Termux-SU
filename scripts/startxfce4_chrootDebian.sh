@@ -10,10 +10,10 @@ C_RED='\e[1;31m'; C_GREEN='\e[1;32m'; C_YELLOW='\e[1;33m'; C_CYAN='\e[1;36m'; C_
 # Helper for graceful process termination
 terminate_process() {
     local pattern=$1
-    if pidof "$pattern" >/dev/null 2>&1; then
-        killall -15 "$pattern" 2>/dev/null || true
+    if pgrep -f "$pattern" >/dev/null 2>&1; then
+        pkill -15 -f "$pattern" 2>/dev/null || true
         sleep 1
-        killall -9 "$pattern" 2>/dev/null || true
+        pkill -9 -f "$pattern" 2>/dev/null || true
     fi
 }
 
@@ -30,6 +30,10 @@ test -f ~/clipboard-sync.sh || MISSING="$MISSING clipboard-sync.sh"
 if [ -n "$MISSING" ]; then
     echo -e "${C_RED}[✗] Missing prerequisites:$MISSING${NC}"
     echo -e "${C_YELLOW}  Install missing packages and try again.${NC}"
+    exit 1
+fi
+if ! su -c "test -d $DEBIANPATH/usr/bin" 2>/dev/null; then
+    echo -e "${C_RED}[✗] Chroot not found at $DEBIANPATH${NC}"
     exit 1
 fi
 
@@ -86,7 +90,7 @@ disown
 
 # ── 3. FAST-PATH BRIDGE ─────────────────────────────────────────────
 echo -e "${C_YELLOW}[~] Mounting chroot filesystems...${NC}"
-bash ~/mount-debian.sh 2>&1 | grep -v "All Bridges Verified\|Synchronizing Hardware"
+bash ~/mount-debian.sh 2>&1 | grep -v "All Bridges Verified\|Synchronizing Hardware" || true
 
 # ── 4. GRAPHICS SYNC ────────────────────────────────────────────────
 echo -e "${C_CYAN}[→] Waiting for X11 socket...${NC}"

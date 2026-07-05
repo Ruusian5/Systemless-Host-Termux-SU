@@ -3,6 +3,7 @@
 # Refactored for strictly idempotent state management
 
 DEBIANPATH="/data/local/tmp/chrootDebian"
+TERMUX_TMP="/data/data/com.termux/files/usr/tmp"
 
 # 1. CORE SUID PROTECTION
 # Android mounts /data with nosuid. We MUST fix this or su/sudo will fail.
@@ -56,11 +57,8 @@ su -c "
     domount /sdcard $DEBIANPATH/sdcard
     domount /data/data/com.termux/files/usr $DEBIANPATH/data/data/com.termux/files/usr
     domount /data/data/com.termux/files/usr/tmp $DEBIANPATH/tmp
-    # X11 socket — bind mount if host has it (Termux tmp shared via /tmp bind mount above)
-    mkdir -p $DEBIANPATH/tmp/.X11-unix 2>/dev/null || true
-    if [ -d /tmp/.X11-unix ]; then
-      domount /tmp/.X11-unix $DEBIANPATH/tmp/.X11-unix
-    fi
+    # X11 socket is shared through the Termux tmp bind mount above
+    mkdir -p $TERMUX_TMP/.X11-unix $DEBIANPATH/tmp/.X11-unix 2>/dev/null || true
 
     # Mount tmpfs components (dev/shm AFTER /dev bind mount so target exists)
     mkdir -p $DEBIANPATH/dev/shm 2>/dev/null || true
