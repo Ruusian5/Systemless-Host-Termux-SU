@@ -1,0 +1,44 @@
+#!/bin/bash
+# android — run Android ELF binaries from inside the Debian chroot
+# Uses /system/bin/linker64 (Android's native linker) to execute Android
+# binaries directly. This works because the chroot bind-mounts /system.
+#
+# Usage:
+#   android                    — drop into interactive Android shell
+#   android <binary> [args]    — run any Android binary (e.g. android sh)
+#   android am <intent>        — control Android apps via ActivityManager
+#   android input <event>      — inject touch/key events
+#   android settings <cmd>     — read/write Android system settings
+#   android dumpsys <service>  — dump Android system service state
+#   android pm <cmd>           — Android package manager
+
+ANDROID_BIN="${1:-sh}"
+shift 2>/dev/null || true
+
+# Android linker path
+LINKER64="/system/bin/linker64"
+
+# Resolve binary path
+if [[ "$ANDROID_BIN" != */* ]]; then
+    # Search Android PATH
+    for dir in /system/bin /system/xbin /vendor/bin; do
+        if [ -x "$dir/$ANDROID_BIN" ]; then
+            ANDROID_BIN="$dir/$ANDROID_BIN"
+            break
+        fi
+    done
+fi
+
+if [ ! -f "$LINKER64" ]; then
+    echo "Error: $LINKER64 not found — is /system mounted in chroot?" >&2
+    exit 1
+fi
+
+if [ ! -f "$ANDROID_BIN" ]; then
+    echo "Error: $ANDROID_BIN not found in Android filesystem" >&2
+    echo "Available: $(ls /system/bin/ 2>/dev/null | tr '\n' ' ')" >&2
+    exit 1
+fi
+
+# Execute via Android linker
+exec "$LINKER64" "$ANDROID_BIN" "$@"

@@ -1,66 +1,91 @@
 #!/bin/bash
-# --- ENTERPRISE SHUTDOWN SCRIPT (V0.2) ---
-# Graceful process lifecycle + reverse-order unmount
+# --- ENTERPRISE SHUTDOWN SCRIPT (V0.3) ---
+# Intelligent Stop: detect what's running before announcing, clean all stale state
 
 DEBIANPATH="/data/local/tmp/chrootDebian"
 B="/data/data/com.termux/files/usr/bin/busybox"
-C_RED='\e[1;31m'; C_GREEN='\e[1;32m'; C_YELLOW='\e[1;33m'; NC='\e[0m'
-kill_count=0
+TERMUX_TMP="/data/data/com.termux/files/usr/tmp"
+C_RED='\e[1;31m'; C_GREEN='\e[1;32m'; C_YELLOW='\e[1;33m'; C_CYAN='\e[1;36m'; NC='\e[0m'
+killed_any=0
 
 echo -e "${C_YELLOW}[~] Initiating Graceful System Cleanup...${NC}"
+
+# ── 0. DETECT CURRENT STATE ──────────────────────────────────────────
+echo -e "${C_YELLOW}[→] Scanning running services...${NC}"
+
+X_PROC=""; pgrep -f "com.termux.x11" >/dev/null 2>&1 && X_PROC=1
+pgrep -f "termux-x11" >/dev/null 2>&1 && X_PROC=1
+PA_RUNNING=0; pgrep -x pulseaudio >/dev/null 2>&1 && PA_RUNNING=1
+VIRGL_RUNNING=0; pgrep -f virgl_test_server >/dev/null 2>&1 && VIRGL_RUNNING=1
+CLIP_RUNNING=0; pgrep -f clipboard-sync.sh >/dev/null 2>&1 && CLIP_RUNNING=1
+BAT_RUNNING=0; pgrep -f battery-bridge.sh >/dev/null 2>&1 && BAT_RUNNING=1
+CHROOT_MOUNTED=0; su -c "grep -q 'chrootDebian' /proc/mounts" 2>/dev/null && CHROOT_MOUNTED=1
+
+echo -e "  X11:     $([ -n "$X_PROC" ] && echo "${C_GREEN}● Running${NC}" || echo "${C_RED}○ Stopped${NC}")"
+echo -e "  Audio:   $([ $PA_RUNNING -eq 1 ] && echo "${C_GREEN}● Running${NC}" || echo "${C_RED}○ Stopped${NC}")"
+echo -e "  VirGL:   $([ $VIRGL_RUNNING -eq 1 ] && echo "${C_GREEN}● Running${NC}" || echo "${C_RED}○ Stopped${NC}")"
+echo -e "  Clip:    $([ $CLIP_RUNNING -eq 1 ] && echo "${C_GREEN}● Running${NC}" || echo "${C_RED}○ Stopped${NC}")"
+echo -e "  Battery: $([ $BAT_RUNNING -eq 1 ] && echo "${C_GREEN}● Running${NC}" || echo "${C_RED}○ Stopped${NC}")"
+echo -e "  Chroot:  $([ $CHROOT_MOUNTED -eq 1 ] && echo "${C_GREEN}● Mounted${NC}" || echo "${C_RED}○ Unmounted${NC}")"
+
+# Nothing to do — short-circuit
+if [ -z "$X_PROC" ] && [ $PA_RUNNING -eq 0 ] && [ $VIRGL_RUNNING -eq 0 ] && \
+   [ $CLIP_RUNNING -eq 0 ] && [ $BAT_RUNNING -eq 0 ] && [ $CHROOT_MOUNTED -eq 0 ]; then
+    echo -e "${C_GREEN}[✓] Nothing running — cleaning stale sockets only${NC}"
+    # Still clean stale sockets
+    rm -f "$TERMUX_TMP/.X0-lock" "$TERMUX_TMP/.X11-unix/X0" "$TERMUX_TMP/.virgl_test" 2>/dev/null
+    rm -f "$TERMUX_TMP/battery-status" "$TERMUX_TMP/battery-bridge.pid" 2>/dev/null
+    # Rotate old x11 log
+    if [ -f ~/x11_server.log ] && [ -s ~/x11_server.log ]; then
+        mv ~/x11_server.log ~/x11_server.log.old 2>/dev/null
+        echo "Log Rotated on $(date)" > ~/x11_server.log
+    fi
+    echo -e "${C_GREEN}[✓] Stale sockets cleaned${NC}"
+    exit 0
+fi
 
 # ── 1. KILL HELPER ──────────────────────────────────────────────────
 kill_proc() {
     local sig=$1 name=$2 flag=${3:--x}
     if pgrep "$flag" "$name" >/dev/null 2>&1; then
         pkill "$flag" "-$sig" "$name" 2>/dev/null || true
-        kill_count=$((kill_count+1))
+        killed_any=1
         echo -e "  ${C_YELLOW}[~] Killed: $name${NC}"
     fi
 }
 
 # ── 2. GRACEFUL SHUTDOWN (SIGTERM) ──────────────────────────────────
 echo -e "${C_YELLOW}[→] Sending SIGTERM to running processes...${NC}"
-# Inside chroot (processes share PID namespace with host — accessible via su)
-su -c "pkill -15 xfce4-session" 2>/dev/null && echo -e "  ${C_YELLOW}[~] Killed: xfce4-session${NC}" || true
-su -c "pkill -15 xfwm4" 2>/dev/null && echo -e "  ${C_YELLOW}[~] Killed: xfwm4${NC}" || true
-su -c "pkill -15 xfdesktop" 2>/dev/null && echo -e "  ${C_YELLOW}[~] Killed: xfdesktop${NC}" || true
+# Chroot-side desktop processes
+for proc in xfce4-session xfwm4 xfdesktop xfce4-panel xfsettingsd xfce4-notifyd; do
+    su -c "pkill -15 $proc" 2>/dev/null && echo -e "  ${C_YELLOW}[~] Killed: $proc (chroot)${NC}" && killed_any=1 || true
+done
+
 # Termux-side
 kill_proc 15 "termux-x11"
 kill_proc 15 "pulseaudio"
-kill_proc 15 "picom" 2>/dev/null || true
-kill_proc 15 "socat" 2>/dev/null || true
-pkill -f clipboard-sync.sh 2>/dev/null && echo -e "  ${C_YELLOW}[~] Killed: clipboard-sync${NC}" || true
-pkill -f virgl_test_server_android 2>/dev/null && echo -e "  ${C_YELLOW}[~] Killed: virgl_test_server_android${NC}" || true
+kill_proc 15 "picom"
+kill_proc 15 "socat"
+[ $CLIP_RUNNING -eq 1 ] && pkill -f clipboard-sync.sh 2>/dev/null && echo -e "  ${C_YELLOW}[~] Killed: clipboard-sync${NC}" && killed_any=1 || true
+[ $VIRGL_RUNNING -eq 1 ] && pkill -f virgl_test_server_android 2>/dev/null && echo -e "  ${C_YELLOW}[~] Killed: virgl_test_server${NC}" && killed_any=1 || true
 
-# Kill the Termux:X11 Android activity (immune in top-app cgroup, best-effort)
-command -v am >/dev/null 2>&1 && am force-stop com.termux.x11 2>/dev/null && echo -e "  ${C_GREEN}[✓] Termux:X11 activity stopped${NC}" || true
+# Kill the Termux:X11 Android activity
+if [ -n "$X_PROC" ]; then
+    command -v am >/dev/null 2>&1 && am force-stop com.termux.x11 2>/dev/null || true
+    echo -e "  ${C_YELLOW}[~] Termux:X11 activity stopped${NC}"
+fi
 
 sleep 2
 
 # ── 3. FORCEFUL CLEANUP (SIGKILL) ───────────────────────────────────
 echo -e "${C_YELLOW}[→] Forceful cleanup of remaining processes...${NC}"
-su -c "pkill -9 xfce4-session" 2>/dev/null || true
-su -c "pkill -9 xfwm4" 2>/dev/null || true
-su -c "pkill -9 xfdesktop" 2>/dev/null || true
+if su -c "pgrep -x xfce4-session" >/dev/null 2>&1; then su -c "pkill -9 xfce4-session" 2>/dev/null || true; fi
+if su -c "pgrep -x xfwm4" >/dev/null 2>&1; then su -c "pkill -9 xfwm4" 2>/dev/null || true; fi
+if su -c "pgrep -x xfdesktop" >/dev/null 2>&1; then su -c "pkill -9 xfdesktop" 2>/dev/null || true; fi
 pkill -9 termux-x11 2>/dev/null || true
 pkill -9 pulseaudio 2>/dev/null || true
-pkill -9 picom 2>/dev/null || true
-pkill -9 socat 2>/dev/null || true
 pkill -f clipboard-sync.sh 2>/dev/null || true
 pkill -f virgl_test_server_android 2>/dev/null || true
-
-# Clean up stale X11 socket and lock files
-rm -f /data/data/com.termux/files/usr/tmp/.X0-lock /data/data/com.termux/files/usr/tmp/.X11-unix/X0 2>/dev/null || true
-
-# Clean up clipboard-sync PID file
-rm -f /data/data/com.termux/files/usr/tmp/clipboard-sync.pid 2>/dev/null
-
-if [ $kill_count -gt 0 ]; then
-    echo -e "  ${C_GREEN}[✓] $kill_count process(es) stopped${NC}"
-else
-    echo -e "  ${C_YELLOW}[~] No processes needed stopping${NC}"
-fi
 
 # ── 3.5 KILL ALL CHROOT PROCESSES ──────────────────────────────────
 echo -e "${C_YELLOW}[→] Scanning for processes inside chroot...${NC}"
@@ -76,28 +101,63 @@ if [ -n "$CHROOT_PIDS" ]; then
             echo -e "  ${C_RED}[!] Force-killing remaining: $CHROOT_PIDS_REM${NC}"
             su -c "kill -9 $CHROOT_PIDS_REM" 2>/dev/null || true
         fi
+        killed_any=1
         echo -e "  ${C_GREEN}[✓] All chroot processes terminated${NC}"
     fi
 else
     echo -e "  ${C_GREEN}[✓] No processes inside chroot${NC}"
 fi
 
-# ── 4. LOG ROTATION ─────────────────────────────────────────────────
-if [ -f ~/x11_server.log ]; then
-    mv ~/x11_server.log ~/x11_server.log.old 2>/dev/null
-    echo "Log Rotated" > ~/x11_server.log
+# ── 4. CLEAN STATE ──────────────────────────────────────────────────
+echo -e "${C_YELLOW}[→] Cleaning stale state...${NC}"
+
+# X11 socket
+if [ -S "$TERMUX_TMP/.X11-unix/X0" ]; then
+    rm -f "$TERMUX_TMP/.X0-lock" "$TERMUX_TMP/.X11-unix/X0" 2>/dev/null
+    echo -e "  ${C_YELLOW}[~] Removed stale X11 socket${NC}"
 fi
 
-# ── 5. UNMOUNT (reverse of mount order) ──────────────────────────────
-echo -e "${C_YELLOW}[→] Unmounting chroot filesystems...${NC}"
-umount_count=0
-if su -c "grep -q 'chrootDebian' /proc/mounts" 2>/dev/null; then
+# VirGL socket
+if [ -S "$TERMUX_TMP/.virgl_test" ]; then
+    rm -f "$TERMUX_TMP/.virgl_test" 2>/dev/null
+    echo -e "  ${C_YELLOW}[~] Removed stale VirGL socket${NC}"
+fi
+
+# Clipboard PID file
+if [ -f "$TERMUX_TMP/clipboard-sync.pid" ]; then
+    rm -f "$TERMUX_TMP/clipboard-sync.pid" 2>/dev/null
+fi
+
+# Battery state
+if [ -f "$TERMUX_TMP/battery-status" ] || [ -f "$TERMUX_TMP/battery-bridge.pid" ]; then
+    rm -f "$TERMUX_TMP/battery-status" "$TERMUX_TMP/battery-bridge.pid" 2>/dev/null
+    echo -e "  ${C_YELLOW}[~] Removed stale battery monitor state${NC}"
+fi
+
+# ── 5. LOG ROTATION ─────────────────────────────────────────────────
+if [ -f ~/x11_server.log ] && [ -s ~/x11_server.log ]; then
+    mv ~/x11_server.log ~/x11_server.log.old 2>/dev/null
+    echo "Log Rotated on $(date)" > ~/x11_server.log
+    echo -e "  ${C_YELLOW}[~] Rotated x11_server.log${NC}"
+fi
+
+# ── 6. UNMOUNT (reverse of mount order) ──────────────────────────────
+if [ $CHROOT_MOUNTED -eq 1 ]; then
+    echo -e "${C_YELLOW}[→] Unmounting chroot filesystems...${NC}"
+    umount_count=0
     for mp in var/lock run dev/shm tmp data/data/com.termux/files/usr sdcard linkerconfig apex vendor system dev/pts sys proc dev; do
-        su -c "$B umount -l $DEBIANPATH/$mp" 2>/dev/null && umount_count=$((umount_count+1))
+        if su -c "grep -q '$DEBIANPATH/$mp' /proc/mounts" 2>/dev/null; then
+            su -c "$B umount -l $DEBIANPATH/$mp" 2>/dev/null && umount_count=$((umount_count+1))
+        fi
     done
     echo -e "  ${C_GREEN}[✓] $umount_count mount(s) unmounted.${NC}"
 else
-    echo -e "  ${C_YELLOW}[~] Chroot not mounted — nothing to unmount.${NC}"
+    echo -e "  ${C_YELLOW}[~] Chroot not mounted — skipping unmount${NC}"
 fi
 
-echo -e "${C_GREEN}[✓] All Resources Freed.${NC}"
+echo ""
+if [ $killed_any -eq 1 ]; then
+    echo -e "${C_GREEN}[✓] All Resources Freed.${NC}"
+else
+    echo -e "${C_YELLOW}[~] No processes needed stopping — state cleaned.${NC}"
+fi

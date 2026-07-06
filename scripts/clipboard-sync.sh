@@ -24,14 +24,22 @@ su -c "setenforce 0" 2>/dev/null
 
 # ---- helpers: run xclip inside Debian chroot ----
 _xclip() {
-    su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/env -i DISPLAY=:0 XDG_RUNTIME_DIR=/tmp HOME=/home/ruusian TERM=xterm PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /usr/bin/xclip $*" 2>/dev/null || true
+    su -c "timeout 2 /data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/env -i DISPLAY=:0 XDG_RUNTIME_DIR=/tmp HOME=/home/ruusian TERM=xterm PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /usr/bin/xclip $*" 2>/dev/null || true
 }
 _xclip_in() {
-    su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/env -i DISPLAY=:0 XDG_RUNTIME_DIR=/tmp HOME=/home/ruusian TERM=xterm PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /usr/bin/xclip -i $*" 2>/dev/null || true
+    su -c "timeout 2 /data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/env -i DISPLAY=:0 XDG_RUNTIME_DIR=/tmp HOME=/home/ruusian TERM=xterm PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /usr/bin/xclip -i $*" 2>/dev/null || true
 }
 
-# Wait for X11 socket
-while [ ! -S "$XDG_RUNTIME_DIR/.X11-unix/X0" ]; do sleep 2; done
+# Wait for X11 socket (max 10s wait)
+MAX_WAIT=5
+while [ ! -S "$XDG_RUNTIME_DIR/.X11-unix/X0" ]; do
+    MAX_WAIT=$((MAX_WAIT - 1))
+    if [ $MAX_WAIT -le 0 ]; then
+        echo "X11 socket not found. Clipboard sync exiting." >&2
+        exit 1
+    fi
+    sleep 2
+done
 
 # Verify xclip is available inside chroot
 su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /usr/bin/which xclip" >/dev/null 2>&1 || {
@@ -43,6 +51,7 @@ LAST_TERMUX=$(termux-clipboard-get 2>/dev/null)
 LAST_X11=$(_xclip -o -selection clipboard)
 _IT=0
 while true; do
+    [ ! -S "$XDG_RUNTIME_DIR/.X11-unix/X0" ] && exit 0
     _IT=$(( (_IT + 1) % 3 ))
     CUR_TERMUX=$(termux-clipboard-get 2>/dev/null)
     if [ "$CUR_TERMUX" != "$LAST_TERMUX" ] && [ -n "$CUR_TERMUX" ]; then

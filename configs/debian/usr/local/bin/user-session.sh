@@ -94,6 +94,7 @@ cat > /home/ruusian/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml << 
         <value type="int" value="3"/>
         <value type="int" value="4"/>
         <value type="int" value="5"/>
+        <value type="int" value="6"/>
       </property>
       <property name="background-style" type="int" value="1"/>
       <property name="background-alpha" type="uint" value="92"/>
@@ -106,9 +107,18 @@ cat > /home/ruusian/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml << 
     <property name="plugin-3" type="string" value="separator"/>
     <property name="plugin-4" type="string" value="systray"/>
     <property name="plugin-5" type="string" value="clock"/>
+    <property name="plugin-6" type="string" value="genmon"/>
   </property>
 </channel>
 PANELCFG
+
+# Configure genmon battery plugin
+mkdir -p /home/ruusian/.config/xfce4/panel/genmon-6
+cat > /home/ruusian/.config/xfce4/panel/genmon-6/genmonrc << 'GENMONCFG'
+Command=/usr/local/bin/battery-monitor.sh
+Period=60
+Font=Noto Sans 10
+GENMONCFG
 
 /usr/bin/xfce4-panel > "$GUI_NULL" 2>&1 &
 /usr/bin/xfce4-notifyd > "$GUI_NULL" 2>&1 &

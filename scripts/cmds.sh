@@ -46,10 +46,46 @@ while true; do
         PA_STATUS="${C_RED}○ Stopped${NC}"
     fi
 
+    # Check VirGL GPU
+    if pgrep -f virgl_test_server >/dev/null 2>&1 && [ -S /data/data/com.termux/files/usr/tmp/.virgl_test ]; then
+        VIRGL_STATUS="${C_GREEN}● Running${NC}"
+    elif [ -S /data/data/com.termux/files/usr/tmp/.virgl_test ]; then
+        VIRGL_STATUS="${C_ORANGE}○ Stale socket${NC}"
+    else
+        VIRGL_STATUS="${C_RED}○ Stopped${NC}"
+    fi
+
+    # Check Clipboard Sync
+    if pgrep -f clipboard-sync.sh >/dev/null 2>&1; then
+        CLIP_STATUS="${C_GREEN}● Running${NC}"
+    else
+        CLIP_STATUS="${C_RED}○ Stopped${NC}"
+    fi
+
+    # Check Battery Monitor
+    if [ -f /data/data/com.termux/files/usr/tmp/battery-status ]; then
+        BATTERY_INFO=$(python3 -c "
+import sys,json
+d=json.load(open('/data/data/com.termux/files/usr/tmp/battery-status'))
+print(d.get('percentage','?'), d.get('plugged','?'), d.get('status','?'))
+" 2>/dev/null)
+        BAT_PCT=$(echo "$BATTERY_INFO" | awk '{print $1}')
+        if pgrep -f battery-bridge.sh >/dev/null 2>&1; then
+            BATTERY_STATUS="${C_GREEN}● ${BAT_PCT}%${NC}"
+        else
+            BATTERY_STATUS="${C_ORANGE}○ ${BAT_PCT}% (stale)${NC}"
+        fi
+    else
+        BATTERY_STATUS="${C_RED}○ N/A${NC}"
+    fi
+
     echo -e "${C_BOLD}System Status:${NC}"
     echo -e "  Chroot:  $CHROOT_STATUS"
     echo -e "  X11:     $X_STATUS"
+    echo -e "  VirGL:   $VIRGL_STATUS"
     echo -e "  Audio:   $PA_STATUS"
+    echo -e "  Clipboard: $CLIP_STATUS"
+    echo -e "  Battery: $BATTERY_STATUS"
     echo ""
     echo -e "${C_BOLD}${C_CYAN}─── Quick Actions ───${NC}"
     echo -e "  ${C_GREEN}[1]${NC}  Start GUI Desktop     ${C_GREEN}[2]${NC}  Stop GUI"
@@ -61,8 +97,9 @@ while true; do
     echo -e "  ${C_PURPLE}[8]${NC}  Login as root         ${C_PURPLE}[9]${NC}  Login as ruusian"
     echo ""
     echo -e "${C_BOLD}${C_ORANGE}─── Utilities ───${NC}"
-    echo -e "  ${C_ORANGE}[10]${NC} Backup Chroot         ${C_ORANGE}[11]${NC} Clipboard Sync"
-    echo -e "  ${C_ORANGE}[12]${NC} Clear System Cache    ${C_ORANGE}[13]${NC} Cleanup System"
+    echo -e "  ${C_ORANGE}[10]${NC} Clipboard Sync        ${C_ORANGE}[11]${NC} Clear System Cache"
+    echo -e "  ${C_ORANGE}[12]${NC} Cleanup System        ${C_ORANGE}[13]${NC} Toggle Battery Monitor"
+    echo -e "  ${C_ORANGE}[14]${NC} Battery Status"
     echo ""
     echo -e "  ${C_RED}[q]${NC}  Quit Dashboard"
     echo ""
@@ -101,19 +138,41 @@ while true; do
             else
                 echo -e "${C_RED}Chroot not found at /data/local/tmp/chrootDebian${NC}"
             fi ;;
-        10) BACKUP_FILE="/sdcard/debian-backup-manual-$(date +%Y%m%d_%H%M%S).tar"
-            echo -e "${C_GREEN}Creating backup (chroot OS only, excluding bind-mounts)...${NC}"
-            su -c "/data/data/com.termux/files/usr/bin/tar \
-              --warning=no-file-changed \
-              --exclude='dev/*' --exclude='proc/*' --exclude='sys/*' \
-              --exclude='system/*' --exclude='vendor/*' --exclude='apex/*' --exclude='linkerconfig/*' \
-              --exclude='sdcard/*' \
-              --exclude='data/data/com.termux/*' \
-              --exclude='tmp/*' \
-              -cf \"$BACKUP_FILE\" -C /data/local/tmp chrootDebian" 2>&1 && echo -e "${C_GREEN}Backup saved: $BACKUP_FILE${NC}" || echo -e "${C_RED}Backup failed (see errors above)${NC}" ;;
-        11) bash ~/clipboard-sync.sh & ;;
-        12) su -c "sync && echo 3 > /proc/sys/vm/drop_caches" 2>/dev/null && echo "Cache cleared";;
-        13) bash ~/cleanup.sh ;;
+        10) bash ~/clipboard-sync.sh & ;;
+        11) su -c "sync && echo 3 > /proc/sys/vm/drop_caches" 2>/dev/null && echo "Cache cleared";;
+        12) bash ~/cleanup.sh ;;
+        13) if pgrep -f battery-bridge.sh >/dev/null 2>&1; then
+                echo -e "${C_ORANGE}Stopping Battery Monitor...${NC}"
+                kill "$(pgrep -f battery-bridge.sh)" 2>/dev/null
+                rm -f /data/data/com.termux/files/usr/tmp/battery-bridge.pid 2>/dev/null
+                echo -e "${C_GREEN}Battery Monitor stopped${NC}"
+            else
+                echo -e "${C_GREEN}Starting Battery Monitor...${NC}"
+                bash ~/battery-bridge.sh &
+                sleep 1
+                if pgrep -f battery-bridge.sh >/dev/null 2>&1; then
+                    echo -e "${C_GREEN}Battery Monitor started${NC}"
+                else
+                    echo -e "${C_RED}Failed to start Battery Monitor${NC}"
+                fi
+            fi ;;
+        14) if [ -f /data/data/com.termux/files/usr/tmp/battery-status ]; then
+                echo -e "${C_CYAN}Battery Status:${NC}"
+                python3 -c "
+import sys,json
+d=json.load(open('/data/data/com.termux/files/usr/tmp/battery-status'))
+pct=d.get('percentage','?')
+plug=d.get('plugged','?')
+stat=d.get('status','?')
+temp=d.get('temperature','?')
+print(f'  Level:  {pct}%')
+print(f'  Plugged: {plug}')
+print(f'  Status: {stat}')
+print(f'  Temp:   {temp}°C')
+" 2>/dev/null || echo -e "${C_RED}Error reading battery data${NC}"
+            else
+                echo -e "${C_RED}Battery Monitor not running. Start with [13].${NC}"
+            fi ;;
         r|R) clear ;;
         q|Q) echo -e "${C_GREEN}Goodbye!${NC}"; exit 0 ;;
         *) echo -e "${C_RED}Invalid option${NC}"; sleep 1 ;;

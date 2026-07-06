@@ -73,6 +73,28 @@ su -c "
     mkdir -p $DEBIANPATH/run/user/\$RUUSIAN_UID
     chown \$RUUSIAN_UID:\$RUUSIAN_UID $DEBIANPATH/run/user/\$RUUSIAN_UID
     chmod 777 $DEBIANPATH/run/user/\$RUUSIAN_UID
+    
+    # Fix /sdcard access: ensure media_rw group exists and ruusian is a member
+    if ! grep -q '^media_rw:' $DEBIANPATH/etc/group; then
+        echo 'media_rw:x:1023:' >> $DEBIANPATH/etc/group
+    fi
+    if ! /data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/id -nG ruusian 2>/dev/null | grep -q 'media_rw'; then
+        /data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/sbin/usermod -aG 1023 ruusian
+    fi
+
+    # Initialize and enable swapfile for ruusian
+    SWAPFILE="$DEBIANPATH/home/ruusian/swapfile"
+    if [ ! -f "$SWAPFILE" ]; then
+        /system/bin/dd if=/dev/zero of="$SWAPFILE" bs=1M count=2048 2>/dev/null
+        chmod 600 "$SWAPFILE"
+        chown 1000:1000 "$SWAPFILE"
+        /system/bin/mkswap "$SWAPFILE" 2>/dev/null
+    fi
+    # Enable swap if not already enabled
+    if ! grep -q "$SWAPFILE" /proc/swaps 2>/dev/null; then
+        /system/bin/swapon "$SWAPFILE" 2>/dev/null
+    fi
+
     chmod 660 /dev/kgsl-3d0 /dev/dri/* /dev/video* /dev/ion /dev/adsp* /dev/adsprpc* 2>/dev/null || true
 "
 
