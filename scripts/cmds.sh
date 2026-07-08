@@ -60,7 +60,7 @@ while true; do
     echo -e "${C_BOLD}${C_CYAN}─── Actions ───${NC}"
     echo -e "  ${C_GREEN}[1]${NC} Start GUI      ${C_GREEN}[2]${NC} Stop GUI       ${C_GREEN}[3]${NC} Mount Chroot"
     echo -e "  ${C_GREEN}[4]${NC} Shell root     ${C_GREEN}[5]${NC} Shell ruusian  ${C_GREEN}[6]${NC} Clean & Repair"
-    echo -e "  ${C_PURPLE}[7]${NC} App Manager    ${C_GREEN}[8]${NC} GPU Info       ${C_PURPLE}[9]${NC} Synaptic Pkg Mgr   ${C_GREEN}[10]${NC} Restart GUI"
+    echo -e "  ${C_GREEN}[8]${NC} GPU Info       ${C_PURPLE}[9]${NC} Synaptic Pkg Mgr   ${C_GREEN}[10]${NC} Restart GUI"
     echo ""
     echo -e "  ${C_RED}[q]${NC} Quit"
     echo ""
@@ -87,7 +87,6 @@ while true; do
            bash ~/cleanup.sh 2>/dev/null
            bash ~/repair.sh 2>/dev/null
            echo -e "${C_GREEN}[✓] Done${NC}" ;;
-        7) bash ~/app-manager.sh ;;
         8) bash ~/gpu-info.sh ;;
         9) echo -e "${C_YELLOW}[~] Launching Synaptic Package Manager...${NC}"
            if su -c "test -x /data/local/tmp/chrootDebian/usr/sbin/synaptic" 2>/dev/null; then

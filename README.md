@@ -73,8 +73,7 @@ Launch with `bash ~/cmds.sh`. The dashboard shows live status (chroot mount, X11
 Actions:
   [1]  Start GUI          [2]  Stop GUI          [3]  Mount Chroot
   [4]  Shell root         [5]  Shell ruusian     [6]  Clean & Repair
-  [7]  App Manager        [8]  GPU Info           [9]  Synaptic Pkg Mgr
-  [10] Restart GUI
+  [8]  GPU Info           [9]  Synaptic Pkg Mgr  [10] Restart GUI
 
   [q] Quit   [r] Redraw screen
 ```
@@ -87,7 +86,6 @@ Actions:
 | [4] Shell root | inline `busybox chroot` | Root shell inside the chroot |
 | [5] Shell ruusian | inline `busybox chroot` → `su -l ruusian` | User shell inside the chroot |
 | [6] Clean & Repair | `cleanup.sh` + `repair.sh` | Truncates logs, clears APT cache, `dpkg --configure -a`, `apt-get install -f` |
-| [7] App Manager | `app-manager.sh` | Terminal package browser (categories, install/remove/update/search) |
 | [8] GPU Info | `gpu-info.sh` | KGSL model, Turnip driver, Vulkan + Zink/EGL status |
 | [9] Synaptic Pkg Mgr | inline `chroot ... synaptic` | Launches the GUI software store on the desktop (see Known Issues) |
 | [10] Restart GUI | `stop-debian.sh` + `startxfce4_chrootDebian.sh` | Convenience full restart |
@@ -104,7 +102,6 @@ Actions:
 | `mount-debian.sh` | Bind-mount /dev, /proc, /sys, /tmp, /sdcard, vendor, apex, linkerconfig; remounts `/data` suid |
 | `repair.sh` | dpkg fix, apt repair, X11 socket cleanup, fstrim, log truncation |
 | `cleanup.sh` | Stale file cleanup, session log truncation, APT cache purge |
-| `app-manager.sh` | Terminal-based package manager (categories, install/remove/update/search) |
 | `gpu-info.sh` | Turnip+Zink GPU status reporter |
 | `gpu-audit.sh` | GPU stack diagnostic: Adreno, Vulkan, EGL, Mesa, DRI paths |
 | `status-diagnostics.sh` | Health report: chroot mounts, X11 socket, audio, logs |
@@ -134,7 +131,7 @@ Actions:
 | `close_range` syscall crashes apps | `LD_PRELOAD=/home/ruusian/fix_mmap.so` |
 | `sudo`/`su` fail inside chroot ("effective uid is not 0") | `/data` is mounted `nosuid`; re-run **[3] Mount Chroot** (or **[1] Start GUI**) to remount with `suid` |
 | **GNOME Software 43.5 will not launch** ("lost connection to rendering server" / DRI3 not capable) | EGL/DRI3 init is incompatible with Turnip+Zink in this X11 setup. **Use Synaptic instead** (dashboard **[9]**, or the Synaptic icon on the desktop). Verified unfixable here. |
-| Synaptic launched but shows "no packages" | Run `sudo apt update` first (dashboard **[7] App Manager → [u]** or a shell). Repos must be indexed before browsing. |
+| Synaptic launched but shows "no packages" | Run `sudo apt update` first (a shell via dashboard **[5]**, or `apt update` in a terminal). Repos must be indexed before browsing. |
 | Stale X11 socket after crash | `stop-debian.sh` auto-cleans, or `rm /data/data/com.termux/files/usr/tmp/.X11-unix/X0` |
 | `SESSION_MANAGER=localhost` breaks xfwm4 | `user-session.sh` does `unset SESSION_MANAGER` |
 | Duplicate XFCE processes (e.g. two `xfce4-power-manager`) | `user-session.sh` guards each component with `pgrep` before launching |
@@ -143,7 +140,7 @@ Actions:
 
 ## Repo & Deploy
 
-- `scripts/` — canonical Termux-host scripts (`cmds.sh`, `startxfce4_chrootDebian.sh`, `mount-debian.sh`, `app-manager.sh`, etc.).
+- `scripts/` — canonical Termux-host scripts (`cmds.sh`, `startxfce4_chrootDebian.sh`, `mount-debian.sh`, `stop-debian.sh`, `cleanup.sh`, `repair.sh`, `gpu-info.sh`, `clipboard-sync.sh`).
 - `configs/debian/usr/local/bin/` — chroot-side scripts (`user-session.sh`, `v2-launch.sh`, …) deployed into the chroot at `/usr/local/bin/`.
 - `configs/debian/etc/` — chroot config (e.g. `profile.d/99-hardware-acceleration.sh`).
 
@@ -168,9 +165,10 @@ When you edit a host script, update the copy in `scripts/` and vice-versa; the d
 
 | Date | Change |
 |------|--------|
+| Jul 9 | **Removed App Manager [7]** from dashboard (broken `q` quit loop → infinite "Invalid choice"; required uninstalled `dialog`). Deleted `app-manager.sh` from repo + bundle. Re-audit found source-tree drift: `configs/debian/usr/local/bin/vk_test` and `configs/debian/home/ruusian/fix_mmap.so/.c` were missing (only in `releases/mods/`), so bundle rebuilds silently dropped them — restored both to `configs/` and live chroot, rebuilt privacy-clean **gpu-modifications-bundle-20260709.tar.gz** (Zink+Turnip, vk_test, fix_mmap, no app-manager, no secrets). Verified [1]–[6],[8],[10] run clean. |
 | Jul 9 | Full project audit (excluding dpkg manifest + release bundle): fixed 12 host/chroot script issues — `su` authentication failure (chroot `su` missing, `LD_PRELOAD` lost across `su`/`chroot`, `startxfce4` reverted `suid` fix); chroot PATH/term/suid drift; `vk_test` missing; broken dialog `chroot ... which`; `repair.sh` non-idempotent APT; `stop-debian.sh` unmount ordering; `cleanup.sh` secret purge; `app-manager.sh` hardcoded busybox path. Rebuilt privacy-clean **gpu-modifications-bundle-20260709.tar.gz** (Turnip+Zink, LD_PRELOAD wired, battery-monitor + vk_test added, fix_mmap.c present, no secrets). |
 | Jul 8 | Dashboard v3.2: added **[9] Synaptic Pkg Mgr** as the GUI software store (GNOME Software is broken on EGL here); **[10] Restart GUI** |
-| Jul 8 | Added `app-manager.sh` (terminal package browser) as dashboard **[7]** |
+| Jul 8 | Added `app-manager.sh` (terminal package browser) as dashboard **[7]** — later **removed** (broken quit loop, depended on uninstalled `dialog`); package management is via Synaptic [9] or a shell [5] |
 | Jul 8 | `mount-debian.sh` & `startxfce4_chrootDebian.sh`: remount `/data` with `suid` so `sudo`/`su` work inside the chroot |
 | Jul 8 | `user-session.sh`: `pgrep` guards around all XFCE components to prevent duplicate processes |
 | Jul 8 | Removed VirGL; GPU is Turnip+Zink only |
