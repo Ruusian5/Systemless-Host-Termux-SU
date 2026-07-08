@@ -1,0 +1,70 @@
+#!/bin/bash
+# --- CLIPBOARD SYNC DAEMON (v2.0) ---
+# Bidirectional Android <-> X11 clipboard sync
+# xclip runs inside Debian chroot; termux-clipboard-* on Termux host
+
+DEBIANPATH="/data/local/tmp/chrootDebian"
+PIDFILE="/data/data/com.termux/files/usr/tmp/clipboard-sync.pid"
+
+set -o noclobber
+if ! echo $$ > "$PIDFILE" 2>/dev/null; then
+    OLD_PID=$(cat "$PIDFILE" 2>/dev/null)
+    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+        exit 0
+    fi
+    rm -f "$PIDFILE" && echo $$ > "$PIDFILE"
+fi
+set +o noclobber
+trap "rm -f $PIDFILE" EXIT
+
+export DISPLAY=:0
+export XDG_RUNTIME_DIR=/data/data/com.termux/files/usr/tmp
+
+su -c "setenforce 0" 2>/dev/null
+
+# ---- helpers: run xclip inside Debian chroot ----
+_xclip() {
+    su -c "timeout 2 /data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/env -i DISPLAY=:0 XDG_RUNTIME_DIR=/tmp HOME=/home/ruusian TERM=xterm PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /usr/bin/xclip $*" 2>/dev/null || true
+}
+_xclip_in() {
+    su -c "timeout 2 /data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/env -i DISPLAY=:0 XDG_RUNTIME_DIR=/tmp HOME=/home/ruusian TERM=xterm PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /usr/bin/xclip -i $*" 2>/dev/null || true
+}
+
+# Wait for X11 socket (max 10s wait)
+MAX_WAIT=5
+while [ ! -S "$XDG_RUNTIME_DIR/.X11-unix/X0" ]; do
+    MAX_WAIT=$((MAX_WAIT - 1))
+    if [ $MAX_WAIT -le 0 ]; then
+        echo "X11 socket not found. Clipboard sync exiting." >&2
+        exit 1
+    fi
+    sleep 2
+done
+
+# Verify xclip is available inside chroot
+su -c "/data/data/com.termux/files/usr/bin/busybox chroot $DEBIANPATH /usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /usr/bin/which xclip" >/dev/null 2>&1 || {
+    echo "xclip not found inside chroot - install with: apt install xclip" >&2
+    exit 1
+}
+
+LAST_TERMUX=$(termux-clipboard-get 2>/dev/null)
+LAST_X11=$(_xclip -o -selection clipboard)
+_IT=0
+while true; do
+    [ ! -S "$XDG_RUNTIME_DIR/.X11-unix/X0" ] && exit 0
+    _IT=$(( (_IT + 1) % 3 ))
+    CUR_TERMUX=$(termux-clipboard-get 2>/dev/null)
+    if [ "$CUR_TERMUX" != "$LAST_TERMUX" ] && [ -n "$CUR_TERMUX" ]; then
+        echo -n "$CUR_TERMUX" | _xclip_in -selection clipboard
+        echo -n "$CUR_TERMUX" | _xclip_in -selection primary
+        LAST_TERMUX="$CUR_TERMUX"; LAST_X11="$CUR_TERMUX"
+    fi
+    if [ $_IT -eq 0 ]; then
+        CUR_X11=$(_xclip -o -selection clipboard)
+        if [ "$CUR_X11" != "$LAST_X11" ] && [ -n "$CUR_X11" ]; then
+            termux-clipboard-set "$CUR_X11" 2>/dev/null
+            LAST_X11="$CUR_X11"; LAST_TERMUX="$CUR_X11"
+        fi
+    fi
+    sleep 1
+done

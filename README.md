@@ -48,6 +48,23 @@ Debian 12 (bookworm) Chroot at /data/local/tmp/chrootDebian
 
 > **sudo / su inside the chroot** require `/data` to be remounted with `suid` (Android mounts it `nosuid`, which breaks setuid binaries). `mount-debian.sh` and `startxfce4_chrootDebian.sh` perform this remount automatically. If `sudo` ever reports *effective uid is not 0*, re-run dashboard **[3] Mount Chroot** (or **[1] Start GUI**).
 
+## Releases — GPU Drivers & Modifications Bundle
+
+The full Debian rootfs is **not** committed (it is re-downloadable). The non-reinstallable parts are preserved in a single release asset:
+
+- **`releases/gpu-modifications-bundle-20260709.tar.gz`** (~11 MB) — contains the **Turnip + Zink GPU drivers**, our **modifications** (`user-session.sh`, `v2-launch.sh`, `fix_mmap.so`/`.c`, `vk_test`, host dashboard scripts), a **`packages.manifest`** (`dpkg --get-selections` for one-command reinstall), and **`restore.sh`**.
+
+> **Contents are privacy-clean:** no personal files or secrets (`.hermes/`, `.ssh`, `.gnupg`, `.git-credentials`, browser profiles, Documents/Downloads are excluded). See `releases/RESTORE.md` for the full inventory, the **`ruusian` / `1234`** credential note, and the restore procedure.
+
+### Restore onto a fresh Debian rootfs
+
+```bash
+tar -xzf releases/gpu-modifications-bundle-20260709.tar.gz -C /
+bash releases/mods/restore.sh /data/local/tmp/chrootDebian
+```
+
+`restore.sh` installs the GPU drivers, drops in the modifications, creates the `ruusian` user (UID 1000, sudo, password **`1234`**), and replays `packages.manifest` via `dpkg --set-selections` + `apt-get dselect-upgrade`.
+
 ## Dashboard (cmds.sh v3.2)
 
 Launch with `bash ~/cmds.sh`. The dashboard shows live status (chroot mount, X11, audio, GPU) and offers:
