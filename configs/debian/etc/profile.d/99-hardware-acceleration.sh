@@ -1,14 +1,16 @@
 # --- HARDWARE ACCELERATION CONFIG ---
-# VirGL HW acceleration confirmed working with Debian Mesa 22.3.6+
-# virgl_test_server_android runs on Termux host → Adreno 640 via EGL
-# Chroot connects via GALLIUM_DRIVER=virpipe (virgl Gallium pipe)
-# Tested: glmark2 → GL_RENDERER: virgl (Adreno (TM) 640)
+# Turnip (Vulkan) + Zink (OpenGL-on-Vulkan) for Adreno 640
+# VirGL is broken on this device — use native Turnip+Zink instead
 
-# Default GPU: virgl (HW acceleration) — virgl server started by dashboard
-export GALLIUM_DRIVER=virpipe
-export MESA_GL_VERSION_OVERRIDE=4.0
-unset MESA_LOADER_DRIVER_OVERRIDE
+# Zink provides OpenGL via Vulkan (Turnip)
+export MESA_LOADER_DRIVER_OVERRIDE=zink
+export MESA_GL_VERSION_OVERRIDE=4.6
+export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/freedreno_icd.aarch64.json
 unset LIBGL_ALWAYS_SOFTWARE
+unset GALLIUM_DRIVER
+
+# close_range syscall is broken on this kernel — must preload the fix
+export LD_PRELOAD=/home/ruusian/fix_mmap.so
 
 export DISPLAY=:0
 export XDG_RUNTIME_DIR=/run/user/1000

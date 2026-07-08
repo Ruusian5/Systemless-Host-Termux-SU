@@ -24,9 +24,10 @@ install -Dm644 "$BUNDLE/gpu-drivers/etc/profile.d/99-hardware-acceleration.sh" \
 # 2. Chroot-side modifications
 install -Dm755 "$BUNDLE/mods/usr/local/bin/user-session.sh" "$CHROOT/usr/local/bin/user-session.sh"
 install -Dm755 "$BUNDLE/mods/usr/local/bin/v2-launch.sh"    "$CHROOT/usr/local/bin/v2-launch.sh"
+install -Dm755 "$BUNDLE/mods/usr/local/bin/battery-monitor.sh" "$CHROOT/usr/local/bin/battery-monitor.sh"
+install -Dm755 "$BUNDLE/mods/usr/local/bin/vk_test"         "$CHROOT/usr/local/bin/vk_test"
 install -Dm755 "$BUNDLE/mods/home/ruusian/fix_mmap.so"      "$CHROOT/home/ruusian/fix_mmap.so"
 install -Dm644 "$BUNDLE/mods/home/ruusian/fix_mmap.c"       "$CHROOT/home/ruusian/fix_mmap.c"
-install -Dm755 "$BUNDLE/mods/home/ruusian/vk_test"          "$CHROOT/home/ruusian/vk_test" 2>/dev/null || true
 
 # 3. Recreate ruusian user (UID 1000) with sudo + password 1234
 if ! chroot "$CHROOT" id ruusian >/dev/null 2>&1; then
@@ -34,11 +35,16 @@ if ! chroot "$CHROOT" id ruusian >/dev/null 2>&1; then
   echo "ruusian:1234" | chroot "$CHROOT" chpasswd
   chroot "$CHROOT" usermod -aG sudo,audio,video,input,render,disk,plugdev ruusian
 fi
+chroot "$CHROOT" chown -R ruusian:ruusian /home/ruusian 2>/dev/null || true
 
 # 4. Replay package manifest for a reproducible install
 if [ -f "$BUNDLE/packages.manifest" ]; then
+  DEINSTALL=$(grep -vE '^\s*#' "$BUNDLE/packages.manifest" | awk '$2 != "install" {print $1}' | wc -l)
+  if [ "$DEINSTALL" -gt 0 ]; then
+    echo "[!] $DEINSTALL manifest entries are not 'install' (e.g. deinstall) — they will be ignored by dselect-upgrade."
+  fi
   cp "$BUNDLE/packages.manifest" "$CHROOT/tmp/packages.manifest"
-  chroot "$CHROOT" bash -c "dpkg --set-selections < /tmp/packages.manifest && apt-get -y dselect-upgrade"
+  chroot "$CHROOT" bash -c "apt-get -y update && dpkg --set-selections < /tmp/packages.manifest && apt-get -y dselect-upgrade"
   rm -f "$CHROOT/tmp/packages.manifest"
 fi
 

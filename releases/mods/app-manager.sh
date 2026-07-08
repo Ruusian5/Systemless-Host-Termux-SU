@@ -6,6 +6,8 @@
 C_BOLD='\e[1m'; C_GREEN='\e[38;5;82m'; C_CYAN='\e[38;5;39m'
 C_RED='\e[38;5;196m'; C_ORANGE='\e[38;5;208m'; C_PURPLE='\e[38;5;141m'; NC='\e[0m'
 DEBIANPATH="/data/local/tmp/chrootDebian"
+# Ensure /data is remounted suid so chroot su/sudo works
+su -c "/data/data/com.termux/files/usr/bin/busybox mount -o remount,dev,suid /data" 2>/dev/null || true
 
 CHROOT_M=0; su -c "grep -q '/data/local/tmp/chrootDebian/dev ' /proc/mounts" 2>/dev/null && CHROOT_M=1
 if [ $CHROOT_M -eq 0 ]; then

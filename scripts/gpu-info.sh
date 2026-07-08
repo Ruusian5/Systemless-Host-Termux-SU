@@ -4,6 +4,8 @@
 
 C_BOLD='\e[1m'; C_GREEN='\e[38;5;82m'; C_CYAN='\e[38;5;39m'; C_RED='\e[38;5;196m'; NC='\e[0m'
 DEBIANPATH="/data/local/tmp/chrootDebian"
+# Ensure /data is remounted suid so chroot su/sudo works
+su -c "/data/data/com.termux/files/usr/bin/busybox mount -o remount,dev,suid /data" 2>/dev/null || true
 
 clear
 echo -e "${C_CYAN}${C_BOLD}╔══════════════════════════════════════════╗${NC}"
@@ -35,7 +37,7 @@ echo -e "${C_BOLD}── Vulkan GPU Detection ──${NC}"
 su -c "chroot $DEBIANPATH /bin/bash -c '
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/freedreno_icd.aarch64.json
-cd /tmp && test -x vk_test && ./vk_test 2>&1 || echo \"vk_test not compiled\"
+test -x /usr/local/bin/vk_test && /usr/local/bin/vk_test 2>&1 || echo \"vk_test not found at /usr/local/bin/vk_test\"
 '" 2>&1
 
 # Zink/OpenGL test

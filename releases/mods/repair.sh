@@ -13,6 +13,8 @@ NC='\e[0m'
 
 DEBIANPATH="/data/local/tmp/chrootDebian"
 BUSYBOX="/data/data/com.termux/files/usr/bin/busybox"
+# Ensure /data is remounted suid so chroot su/sudo works
+su -c "$BUSYBOX mount -o remount,dev,suid /data" 2>/dev/null || true
 FAIL=0
 
 echo -e "${C_BOLD}${C_CYAN}[Repair Tool v0.1]${NC} Initiating Workstation Scan..."

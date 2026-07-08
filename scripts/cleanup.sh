@@ -1,5 +1,7 @@
 #!/bin/bash
 # System cleanup - remove stale files, old logs, temp data
+# Ensure /data is remounted suid so any chroot su/sudo works
+su -c "/data/data/com.termux/files/usr/bin/busybox mount -o remount,dev,suid /data" 2>/dev/null || true
 echo "=== Cleanup ==="
 echo "Cleaning Hermes sessions..." && rm -f /data/local/tmp/chrootDebian/home/ruusian/.hermes/sessions/*.json 2>/dev/null || true
 echo "Cleaning /tmp..." && find /data/data/com.termux/files/usr/tmp -type f \( -name "*.log" -o -name "pulse-*" -o -name "hermes-*" \) -delete 2>/dev/null || true

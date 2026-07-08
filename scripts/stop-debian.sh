@@ -79,21 +79,42 @@ pkill -9 pulseaudio 2>/dev/null || true
 pkill -f clipboard-sync.sh 2>/dev/null || true
 
 # ── 3.5 KILL ALL CHROOT PROCESSES ──────────────────────────────────
+# NOTE: never kill omniroute/9router — they run as ruusian and must persist.
+PROTECT_RE="omniroute|9router"
 echo -e "${C_YELLOW}[→] Scanning for processes inside chroot...${NC}"
 CHROOT_PIDS=$(su -c "ls -l /proc/*/root 2>/dev/null" | grep "$DEBIANPATH" | awk -F'/' '{print $3}')
 if [ -n "$CHROOT_PIDS" ]; then
-    PIDS_TO_KILL=$(echo "$CHROOT_PIDS" | grep -E '^[0-9]+$' | tr '\n' ' ')
+    PIDS_TO_KILL=""
+    for pid in $CHROOT_PIDS; do
+        echo "$pid" | grep -qE '^[0-9]+$' || continue
+        comm=$(su -c "cat /proc/$pid/comm 2>/dev/null" 2>/dev/null || true)
+        if echo "$comm" | grep -qE "$PROTECT_RE"; then
+            echo -e "  ${C_CYAN}[~] Preserving protected process: $comm (pid $pid)${NC}"
+            continue
+        fi
+        PIDS_TO_KILL="$PIDS_TO_KILL $pid"
+    done
+    PIDS_TO_KILL=$(echo "$PIDS_TO_KILL" | tr -s ' ' | sed 's/^ //')
     if [ -n "$PIDS_TO_KILL" ]; then
-        echo -e "  ${C_YELLOW}[~] Sending SIGTERM to $PIDS_TO_KILL${NC}"
+        echo -e "  ${C_YELLOW}[~] Sending SIGTERM to$PIDS_TO_KILL${NC}"
         su -c "kill -15 $PIDS_TO_KILL" 2>/dev/null || true
         sleep 1.5
-        CHROOT_PIDS_REM=$(su -c "ls -l /proc/*/root 2>/dev/null" | grep "$DEBIANPATH" | awk -F'/' '{print $3}' | grep -E '^[0-9]+$' | tr '\n' ' ')
+        CHROOT_PIDS_REM=""
+        for pid in $(su -c "ls -l /proc/*/root 2>/dev/null" | grep "$DEBIANPATH" | awk -F'/' '{print $3}'); do
+            echo "$pid" | grep -qE '^[0-9]+$' || continue
+            comm=$(su -c "cat /proc/$pid/comm 2>/dev/null" 2>/dev/null || true)
+            echo "$comm" | grep -qE "$PROTECT_RE" && continue
+            CHROOT_PIDS_REM="$CHROOT_PIDS_REM $pid"
+        done
+        CHROOT_PIDS_REM=$(echo "$CHROOT_PIDS_REM" | tr -s ' ' | sed 's/^ //')
         if [ -n "$CHROOT_PIDS_REM" ]; then
-            echo -e "  ${C_RED}[!] Force-killing remaining: $CHROOT_PIDS_REM${NC}"
+            echo -e "  ${C_RED}[!] Force-killing remaining:$CHROOT_PIDS_REM${NC}"
             su -c "kill -9 $CHROOT_PIDS_REM" 2>/dev/null || true
         fi
         killed_any=1
-        echo -e "  ${C_GREEN}[✓] All chroot processes terminated${NC}"
+        echo -e "  ${C_GREEN}[✓] Chroot processes terminated (protected ones preserved)${NC}"
+    else
+        echo -e "  ${C_GREEN}[✓] No killable processes inside chroot${NC}"
     fi
 else
     echo -e "  ${C_GREEN}[✓] No processes inside chroot${NC}"

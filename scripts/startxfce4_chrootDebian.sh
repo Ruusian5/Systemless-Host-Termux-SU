@@ -207,11 +207,20 @@ nohup su -c "chroot $DEBIANPATH /usr/bin/env -i \
     /usr/local/bin/v2-launch.sh" > /dev/null 2>&1 &
 disown
 
-# Quick desktop health check
+# Desktop health check: pass only when the session actually became ready.
+# user-session.sh writes "=== Full XFCE Desktop Ready ===" on success and
+# "<comp> FAILED" for any component that did not start.
 sleep 3
-if su -c "grep -q 'FAILED' $DEBIANPATH/home/ruusian/session_debug.log" 2>/dev/null; then
-    echo -e "${C_YELLOW}[!] Desktop components reported failures in session_debug.log${NC}"
-    echo -e "${C_YELLOW}  Check: $DEBIANPATH/home/ruusian/session_debug.log${NC}"
+LOG_OK=0
+if su -c "test -f $DEBIANPATH/home/ruusian/session_debug.log" 2>/dev/null; then
+    if su -c "grep -q 'Full XFCE Desktop Ready' $DEBIANPATH/home/ruusian/session_debug.log" 2>/dev/null \
+       && ! su -c "grep -q 'FAILED' $DEBIANPATH/home/ruusian/session_debug.log" 2>/dev/null; then
+        LOG_OK=1
+    fi
+fi
+if [ $LOG_OK -eq 0 ]; then
+    echo -e "${C_YELLOW}[!] Desktop health-check inconclusive — inspect session_debug.log:${NC}"
+    echo -e "${C_YELLOW}    $DEBIANPATH/home/ruusian/session_debug.log${NC}"
 fi
 
 echo ""

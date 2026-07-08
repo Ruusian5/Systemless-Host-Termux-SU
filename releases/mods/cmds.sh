@@ -73,11 +73,13 @@ while true; do
         3) bash ~/mount-debian.sh ;;
         4) su -c "test -d /data/local/tmp/chrootDebian/usr/bin" 2>/dev/null && {
                 clean_stale
+                su -c "/data/data/com.termux/files/usr/bin/busybox mount -o remount,dev,suid /data" 2>/dev/null
                 echo -e "${C_GREEN}Entering chroot as root...${NC}"
                 su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /usr/bin/env -i HOME=/root TERM=xterm PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /bin/bash -l"
            } || echo -e "${C_RED}Chroot not found${NC}" ;;
         5) su -c "test -d /data/local/tmp/chrootDebian/usr/bin" 2>/dev/null && {
                 clean_stale
+                su -c "/data/data/com.termux/files/usr/bin/busybox mount -o remount,dev,suid /data" 2>/dev/null
                 echo -e "${C_GREEN}Entering chroot as ruusian...${NC}"
                 su -c "/data/data/com.termux/files/usr/bin/busybox chroot /data/local/tmp/chrootDebian /usr/bin/env -i HOME=/home/ruusian TERM=xterm PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /bin/su -l ruusian"
            } || echo -e "${C_RED}Chroot not found${NC}" ;;

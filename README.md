@@ -152,8 +152,8 @@ When you edit a host script, update the copy in `scripts/` and vice-versa; the d
 ## TODO
 
 ### High Priority
-- [ ] Add `omniroute` exclusion in `stop-debian.sh` (runs inside chroot as ruusian, must not be killed)
-- [ ] Test `stop-debian.sh` "KILL ALL CHROOT PROCESSES" section to ensure it doesn't kill omniroute
+- [x] Add `omniroute` exclusion in `stop-debian.sh` (runs inside chroot as ruusian, must not be killed)
+- [x] Test `stop-debian.sh` "KILL ALL CHROOT PROCESSES" section to ensure it doesn't kill omniroute
 - [ ] Add cleanup of old pip-build-tracker and pip-unpack dirs in /tmp
 
 ### Medium
@@ -168,6 +168,7 @@ When you edit a host script, update the copy in `scripts/` and vice-versa; the d
 
 | Date | Change |
 |------|--------|
+| Jul 9 | Full project audit (excluding dpkg manifest + release bundle): fixed 12 host/chroot script issues — `su` authentication failure (chroot `su` missing, `LD_PRELOAD` lost across `su`/`chroot`, `startxfce4` reverted `suid` fix); chroot PATH/term/suid drift; `vk_test` missing; broken dialog `chroot ... which`; `repair.sh` non-idempotent APT; `stop-debian.sh` unmount ordering; `cleanup.sh` secret purge; `app-manager.sh` hardcoded busybox path. Rebuilt privacy-clean **gpu-modifications-bundle-20260709.tar.gz** (Turnip+Zink, LD_PRELOAD wired, battery-monitor + vk_test added, fix_mmap.c present, no secrets). |
 | Jul 8 | Dashboard v3.2: added **[9] Synaptic Pkg Mgr** as the GUI software store (GNOME Software is broken on EGL here); **[10] Restart GUI** |
 | Jul 8 | Added `app-manager.sh` (terminal package browser) as dashboard **[7]** |
 | Jul 8 | `mount-debian.sh` & `startxfce4_chrootDebian.sh`: remount `/data` with `suid` so `sudo`/`su` work inside the chroot |

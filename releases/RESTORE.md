@@ -3,8 +3,8 @@
 This bundle preserves the **non-reinstallable** parts of the Debian 12 workstation
 chroot that live at `/data/local/tmp/chrootDebian`:
 
-- **Turnip + Zink GPU drivers** (Mesa 24.1.0-devel with KGSL backend for Adreno 640)
-- **Our modifications**: session launcher, hardware-accel profile, `fix_mmap.so` (close_range syscall fix), GUI-test binary, and all host-side dashboard scripts
+- **Turnip + Zink GPU drivers** (Mesa with KGSL backend for Adreno 640)
+- **Our modifications**: session launcher, hardware-accel profile, `fix_mmap.so` (close_range syscall fix), battery monitor, `vk_test` GPU smoke-test, and all host-side dashboard scripts
 - **`packages.manifest`**: a `dpkg --get-selections` list so the full package set can be reinstalled with one `apt` command
 
 The full Debian base is **not** included — you download a fresh Debian rootfs and
@@ -28,12 +28,13 @@ gpu-drivers/
   usr/lib/aarch64-linux-gnu/libvulkan_freedreno.so   # Turnip Vulkan driver (KGSL)
   usr/lib/aarch64-linux-gnu/dri/zink_dri.so          # Zink OpenGL-on-Vulkan
   usr/share/vulkan/icd.d/freedreno_icd.aarch64.json  # Vulkan ICD
-  etc/profile.d/99-hardware-acceleration.sh          # GPU env profile
+  etc/profile.d/99-hardware-acceleration.sh          # GPU env profile (Turnip+Zink + LD_PRELOAD fix)
 mods/
   usr/local/bin/user-session.sh                       # XFCE session initializer
   usr/local/bin/v2-launch.sh                          # chroot entrypoint
+  usr/local/bin/battery-monitor.sh                    # genmon battery plugin
+  usr/local/bin/vk_test                               # GPU smoke-test binary
   home/ruusian/fix_mmap.so + .c                       # close_range LD_PRELOAD fix
-  home/ruusian/vk_test                                # GPU smoke-test binary
   *.sh                                                # host dashboard scripts (cmds.sh, etc.)
 packages.manifest                                     # dpkg --get-selections
 restore.sh                                            # automated installer (below)
@@ -67,10 +68,11 @@ bash mods/restore.sh "$CHROOT"
 
 `restore.sh` does:
 - Copies GPU drivers into the chroot's `/usr/...`
-- Installs `user-session.sh`, `v2-launch.sh`, `fix_mmap.so`, `vk_test`
-- Drops `99-hardware-acceleration.sh` into `/etc/profile.d`
+- Installs `user-session.sh`, `v2-launch.sh`, `battery-monitor.sh`, `vk_test` into `/usr/local/bin`
+- Drops `99-hardware-acceleration.sh` into `/etc/profile.d` (sets Turnip+Zink env **and** `LD_PRELOAD=/home/ruusian/fix_mmap.so`)
+- Installs `fix_mmap.so`/`.c` into `/home/ruusian`
 - Creates the `ruusian` user (UID 1000) with sudo + the `1234` password
-- Replays `packages.manifest` via `dpkg --set-selections` + `apt-get dselect-upgrade`
+- Runs `apt-get update`, then replays `packages.manifest` via `dpkg --set-selections` + `apt-get dselect-upgrade`
 
 ### 3. Finish
 
@@ -86,7 +88,10 @@ bash ~/cmds.sh        # dashboard -> [1] Start GUI
 export MESA_LOADER_DRIVER_OVERRIDE=zink
 export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/freedreno_icd.aarch64.json
 glxinfo | grep "OpenGL renderer"   # expect: zink (Turnip Adreno (TM) 640)
+/usr/local/bin/vk_test              # Vulkan smoke test
 ```
 
 If `glxinfo`/Vulkan can't see the GPU, confirm `/dev/kgsl-3d0` exists and that
-`ruusian` is in the `video`/`render` groups (`id ruusian`).
+`ruusian` is in the `video`/`render` groups (`id ruusian`). If apps crash with a
+`close_range` error, confirm `LD_PRELOAD=/home/ruusian/fix_mmap.so` is set (it is
+exported by `99-hardware-acceleration.sh`).
