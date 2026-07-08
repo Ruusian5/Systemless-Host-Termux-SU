@@ -16,30 +16,23 @@ echo -e "${C_YELLOW}[→] Scanning running services...${NC}"
 X_PROC=""; pgrep -f "com.termux.x11" >/dev/null 2>&1 && X_PROC=1
 pgrep -f "termux-x11" >/dev/null 2>&1 && X_PROC=1
 PA_RUNNING=0; pgrep -x pulseaudio >/dev/null 2>&1 && PA_RUNNING=1
-VIRGL_RUNNING=0; pgrep -f virgl_test_server >/dev/null 2>&1 && VIRGL_RUNNING=1
 CLIP_RUNNING=0; pgrep -f clipboard-sync.sh >/dev/null 2>&1 && CLIP_RUNNING=1
-BAT_RUNNING=0; pgrep -f battery-bridge.sh >/dev/null 2>&1 && BAT_RUNNING=1
 CHROOT_MOUNTED=0; su -c "grep -q 'chrootDebian' /proc/mounts" 2>/dev/null && CHROOT_MOUNTED=1
 
 echo -e "  X11:     $([ -n "$X_PROC" ] && echo "${C_GREEN}● Running${NC}" || echo "${C_RED}○ Stopped${NC}")"
 echo -e "  Audio:   $([ $PA_RUNNING -eq 1 ] && echo "${C_GREEN}● Running${NC}" || echo "${C_RED}○ Stopped${NC}")"
-echo -e "  VirGL:   $([ $VIRGL_RUNNING -eq 1 ] && echo "${C_GREEN}● Running${NC}" || echo "${C_RED}○ Stopped${NC}")"
 echo -e "  Clip:    $([ $CLIP_RUNNING -eq 1 ] && echo "${C_GREEN}● Running${NC}" || echo "${C_RED}○ Stopped${NC}")"
-echo -e "  Battery: $([ $BAT_RUNNING -eq 1 ] && echo "${C_GREEN}● Running${NC}" || echo "${C_RED}○ Stopped${NC}")"
 echo -e "  Chroot:  $([ $CHROOT_MOUNTED -eq 1 ] && echo "${C_GREEN}● Mounted${NC}" || echo "${C_RED}○ Unmounted${NC}")"
 
 # Nothing to do — short-circuit
-if [ -z "$X_PROC" ] && [ $PA_RUNNING -eq 0 ] && [ $VIRGL_RUNNING -eq 0 ] && \
-   [ $CLIP_RUNNING -eq 0 ] && [ $BAT_RUNNING -eq 0 ] && [ $CHROOT_MOUNTED -eq 0 ]; then
+if [ -z "$X_PROC" ] && [ $PA_RUNNING -eq 0 ] && \
+   [ $CLIP_RUNNING -eq 0 ] && [ $CHROOT_MOUNTED -eq 0 ]; then
     echo -e "${C_GREEN}[✓] Nothing running — cleaning stale sockets only${NC}"
     # Still clean stale sockets
-    rm -f "$TERMUX_TMP/.X0-lock" "$TERMUX_TMP/.X11-unix/X0" "$TERMUX_TMP/.virgl_test" 2>/dev/null
-    rm -f "$TERMUX_TMP/battery-status" "$TERMUX_TMP/battery-bridge.pid" 2>/dev/null
-    # Rotate old x11 log
-    if [ -f ~/x11_server.log ] && [ -s ~/x11_server.log ]; then
-        mv ~/x11_server.log ~/x11_server.log.old 2>/dev/null
-        echo "Log Rotated on $(date)" > ~/x11_server.log
-    fi
+    rm -f "$TERMUX_TMP/.X0-lock" "$TERMUX_TMP/.X11-unix/X0" 2>/dev/null
+    # Clean session lock inside chroot
+    su -c "rm -f $DEBIANPATH/tmp/.xfce-session.lock" 2>/dev/null || true
+    rm -f ~/x11_server.log*
     echo -e "${C_GREEN}[✓] Stale sockets cleaned${NC}"
     exit 0
 fi
@@ -67,7 +60,6 @@ kill_proc 15 "pulseaudio"
 kill_proc 15 "picom"
 kill_proc 15 "socat"
 [ $CLIP_RUNNING -eq 1 ] && pkill -f clipboard-sync.sh 2>/dev/null && echo -e "  ${C_YELLOW}[~] Killed: clipboard-sync${NC}" && killed_any=1 || true
-[ $VIRGL_RUNNING -eq 1 ] && pkill -f virgl_test_server_android 2>/dev/null && echo -e "  ${C_YELLOW}[~] Killed: virgl_test_server${NC}" && killed_any=1 || true
 
 # Kill the Termux:X11 Android activity
 if [ -n "$X_PROC" ]; then
@@ -85,7 +77,6 @@ if su -c "pgrep -x xfdesktop" >/dev/null 2>&1; then su -c "pkill -9 xfdesktop" 2
 pkill -9 termux-x11 2>/dev/null || true
 pkill -9 pulseaudio 2>/dev/null || true
 pkill -f clipboard-sync.sh 2>/dev/null || true
-pkill -f virgl_test_server_android 2>/dev/null || true
 
 # ── 3.5 KILL ALL CHROOT PROCESSES ──────────────────────────────────
 echo -e "${C_YELLOW}[→] Scanning for processes inside chroot...${NC}"
@@ -117,29 +108,15 @@ if [ -S "$TERMUX_TMP/.X11-unix/X0" ]; then
     echo -e "  ${C_YELLOW}[~] Removed stale X11 socket${NC}"
 fi
 
-# VirGL socket
-if [ -S "$TERMUX_TMP/.virgl_test" ]; then
-    rm -f "$TERMUX_TMP/.virgl_test" 2>/dev/null
-    echo -e "  ${C_YELLOW}[~] Removed stale VirGL socket${NC}"
-fi
+# Session lock file inside chroot
+su -c "rm -f $DEBIANPATH/tmp/.xfce-session.lock" 2>/dev/null || true
 
 # Clipboard PID file
 if [ -f "$TERMUX_TMP/clipboard-sync.pid" ]; then
     rm -f "$TERMUX_TMP/clipboard-sync.pid" 2>/dev/null
 fi
 
-# Battery state
-if [ -f "$TERMUX_TMP/battery-status" ] || [ -f "$TERMUX_TMP/battery-bridge.pid" ]; then
-    rm -f "$TERMUX_TMP/battery-status" "$TERMUX_TMP/battery-bridge.pid" 2>/dev/null
-    echo -e "  ${C_YELLOW}[~] Removed stale battery monitor state${NC}"
-fi
-
-# ── 5. LOG ROTATION ─────────────────────────────────────────────────
-if [ -f ~/x11_server.log ] && [ -s ~/x11_server.log ]; then
-    mv ~/x11_server.log ~/x11_server.log.old 2>/dev/null
-    echo "Log Rotated on $(date)" > ~/x11_server.log
-    echo -e "  ${C_YELLOW}[~] Rotated x11_server.log${NC}"
-fi
+rm -f ~/x11_server.log*
 
 # ── 6. UNMOUNT (reverse of mount order) ──────────────────────────────
 if [ $CHROOT_MOUNTED -eq 1 ]; then

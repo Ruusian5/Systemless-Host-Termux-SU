@@ -56,10 +56,29 @@ GTKEOF
 
 echo "Starting XFCE desktop..." > /home/ruusian/session_debug.log
 
+# Start UPower daemon manually to bypass D-Bus setuid activation issues
+if ! pgrep -x upowerd >/dev/null 2>&1; then
+    mkdir -p /run/upower
+    sudo /usr/libexec/upowerd > /tmp/upowerd.log 2>&1 &
+    sleep 1
+fi
+
 xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false 2>/dev/null
 xfconf-query -c xfwm4 -p /general/theme -s "Adwaita-dark" 2>/dev/null || true
 xfconf-query -c xsettings -p /Net/IconThemeName -s "Papirus-Dark" 2>/dev/null || true
 xfconf-query -c xsettings -p /Net/ThemeName -s "Adwaita-dark" 2>/dev/null || true
+
+# Fix xfsettingsd key grab issues by disabling problematic grabs
+xfconf-query -c xfce4-session -p /general/LockCommand -s "" 2>/dev/null || true
+xfconf-query -c xfce4-session -p /general/AskForSaveDefault -s false 2>/dev/null || true
+
+# Disable accessibility bus to avoid connection errors in this environment
+xfconf-query -c xfce4-session -p /sessions/Failsafe/Client0_Command -t string -s "xfce4-panel" -a 2>/dev/null || true
+xfconf-query -c xfce4-session -p /sessions/Failsafe/Client1_Command -t string -s "xfce4-desktop" -a 2>/dev/null || true
+xfconf-query -c xfce4-session -p /sessions/Failsafe/Client2_Command -t string -s "xfce4-settings-daemon" -a 2>/dev/null || true
+xfconf-query -c xfce4-session -p /sessions/Failsafe/Client3_Command -t string -s "xfce4-power-manager" -a 2>/dev/null || true
+xfconf-query -c xfce4-session -p /general/AccessibilityEnabled -s false 2>/dev/null || true
+xfconf-query -c xfce4-session -p /general/StartAssistiveTools -s false 2>/dev/null || true
 
 /usr/bin/xfsettingsd --daemon > "$GUI_NULL" 2>&1 &
 sleep 0.5
@@ -120,20 +139,29 @@ Period=60
 Font=Noto Sans 10
 GENMONCFG
 
+# Ensure Synaptic launcher is present
+if [ ! -f /home/ruusian/Desktop/synaptic-launcher.desktop ]; then
+    mkdir -p /home/ruusian/.local/share/applications /home/ruusian/Desktop
+    cat > /home/ruusian/.local/share/applications/synaptic-launcher.desktop << 'SYNEOF'
+[Desktop Entry]
+Name=Synaptic Package Manager
+Comment=Install, remove and upgrade software packages
+Exec=/usr/sbin/synaptic
+Icon=synaptic
+Terminal=false
+Type=Application
+Categories=System;PackageManager;
+SYNEOF
+    cp -f /home/ruusian/.local/share/applications/synaptic-launcher.desktop /home/ruusian/Desktop/synaptic-launcher.desktop
+    chmod 644 /home/ruusian/.local/share/applications/synaptic-launcher.desktop /home/ruusian/Desktop/synaptic-launcher.desktop
+fi
+
 /usr/bin/xfce4-panel > "$GUI_NULL" 2>&1 &
 /usr/bin/xfce4-notifyd > "$GUI_NULL" 2>&1 &
-
-(
-  while true; do sleep 30
-    pkill -9 -x "gvfsd" 2>/dev/null
-    pkill -9 -x "tumblerd" 2>/dev/null
-    pkill -9 -x "gvfsd-metadata" 2>/dev/null
-    pkill -9 -x "xfce4-power-manager" 2>/dev/null
-  done
-) &
+/usr/bin/xfce4-power-manager --no-daemon > "$GUI_NULL" 2>&1 &
 
 sleep 2
-for _comp in xfwm4 xfsettingsd xfdesktop xfce4-panel; do
+for _comp in xfwm4 xfsettingsd xfdesktop xfce4-panel xfce4-notifyd xfce4-power-manager; do
     if pgrep -x "$_comp" >/dev/null 2>&1; then
         echo "  + $_comp running" >> /home/ruusian/session_debug.log
     else
