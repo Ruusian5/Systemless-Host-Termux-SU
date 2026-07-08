@@ -80,11 +80,18 @@ xfconf-query -c xfce4-session -p /sessions/Failsafe/Client3_Command -t string -s
 xfconf-query -c xfce4-session -p /general/AccessibilityEnabled -s false 2>/dev/null || true
 xfconf-query -c xfce4-session -p /general/StartAssistiveTools -s false 2>/dev/null || true
 
-/usr/bin/xfsettingsd --daemon > "$GUI_NULL" 2>&1 &
-sleep 0.5
-/usr/bin/xfwm4 --compositor=off --replace > "$GUI_NULL" 2>&1 &
-sleep 1
-/usr/bin/xfdesktop > "$GUI_NULL" 2>&1 &
+# Start components only if not already running
+if ! pgrep -x xfsettingsd >/dev/null 2>&1; then
+    /usr/bin/xfsettingsd --daemon > "$GUI_NULL" 2>&1 &
+    sleep 0.5
+fi
+if ! pgrep -x xfwm4 >/dev/null 2>&1; then
+    /usr/bin/xfwm4 --compositor=off --replace > "$GUI_NULL" 2>&1 &
+    sleep 1
+fi
+if ! pgrep -x xfdesktop >/dev/null 2>&1; then
+    /usr/bin/xfdesktop > "$GUI_NULL" 2>&1 &
+fi
 
 if command -v feh &>/dev/null; then
   for bg in /usr/share/backgrounds/xfce/xfce-teal.jpg /usr/share/backgrounds/xfce/xfce-blue.jpg /usr/share/backgrounds/xfce/xfce-stripes.png; do
@@ -156,9 +163,24 @@ SYNEOF
     chmod 644 /home/ruusian/.local/share/applications/synaptic-launcher.desktop /home/ruusian/Desktop/synaptic-launcher.desktop
 fi
 
-/usr/bin/xfce4-panel > "$GUI_NULL" 2>&1 &
-/usr/bin/xfce4-notifyd > "$GUI_NULL" 2>&1 &
-/usr/bin/xfce4-power-manager --no-daemon > "$GUI_NULL" 2>&1 &
+# Start panel/notifyd/power manager only if not already running
+if ! pgrep -x xfce4-panel >/dev/null 2>&1; then
+    /usr/bin/xfce4-panel > "$GUI_NULL" 2>&1 &
+fi
+if ! pgrep -x xfce4-notifyd >/dev/null 2>&1; then
+    /usr/bin/xfce4-notifyd > "$GUI_NULL" 2>&1 &
+fi
+if ! pgrep -f "xfce4-power-manager" >/dev/null 2>&1; then
+    /usr/bin/xfce4-power-manager --no-daemon > "$GUI_NULL" 2>&1 &
+fi
+
+# Try to start PackageKit/GNOME Software service (may be inactive in this environment)
+if ! pgrep -x packagekitd >/dev/null 2>&1 && ! pgrep -f "gnome-software --gapplication-service" >/dev/null 2>&1; then
+    mkdir -p /run/user/1000 /home/ruusian/.local/state/packagekit
+    chown ruusian:ruusian /run/user/1000 /home/ruusian/.local/state/packagekit 2>/dev/null || true
+    DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus /usr/libexec/packagekitd --nofork --log-stderr > /tmp/packagekitd.log 2>&1 &
+    sleep 1
+fi
 
 sleep 2
 for _comp in xfwm4 xfsettingsd xfdesktop xfce4-panel xfce4-notifyd xfce4-power-manager; do
