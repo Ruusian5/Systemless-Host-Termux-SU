@@ -1,6 +1,7 @@
 #!/bin/bash
 # --- ENTERPRISE KERNEL BRIDGE (V0.2) ---
-# Removed SUID remount (causes Android app crashes, not needed for chroot)
+# Remounts /data with suid so sudo/su SUID binaries work inside the chroot
+# (Android mounts /data nosuid, which breaks setuid in the Debian environment)
 
 DEBIANPATH="/data/local/tmp/chrootDebian"
 TERMUX_TMP="/data/data/com.termux/files/usr/tmp"
@@ -8,6 +9,9 @@ TERMUX_TMP="/data/data/com.termux/files/usr/tmp"
 echo -e "\e[1;33m[~] Synchronizing Hardware Bridges...\e[0m"
 
 su -c "
+    # CRITICAL: remount /data with suid so sudo/su SUID binaries work inside chroot
+    busybox mount -o remount,dev,suid /data
+
     # Helper function for idempotent bind mounts
     domount() {
         if ! grep -q -w \"\$2\" /proc/mounts; then

@@ -191,6 +191,9 @@ chmod 777 "$TERMUX_TMP/.X11-unix/X0" 2>/dev/null || true
 echo -e "${C_GREEN}[✓] Graphics Bridge Established.${NC}"
 
 # ── 5. LAUNCH DESKTOP ───────────────────────────────────────────────
+# CRITICAL: remount /data with suid so sudo/su work inside chroot
+su -c "busybox mount -o remount,dev,suid /data" 2>/dev/null
+
 echo -e "${C_PINK}[🚀] Starting XFCE desktop session (Turnip+Zink GPU)...${NC}"
 nohup su -c "chroot $DEBIANPATH /usr/bin/env -i \
     DISPLAY=:0 \
