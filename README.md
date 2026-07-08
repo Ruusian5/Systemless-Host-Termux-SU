@@ -33,7 +33,6 @@ Debian 12 (bookworm) Chroot at /data/local/tmp/chrootDebian
   ├── v2-launch.sh         Chroot entrypoint (GPU profile, dbus, su to ruusian)
   ├── 99-hardware-acceleration.sh   GPU config (Turnip+Zink, Mesa overrides)
   ├── fix_mmap.so          LD_PRELOAD hack for broken close_range syscall
-  ├── Synaptic             GUI package manager (primary software store)
   └── 1,090+ packages      Firefox ESR, Node.js, build-essential, ffmpeg, etc.
 ```
 
@@ -73,7 +72,7 @@ Launch with `bash ~/cmds.sh`. The dashboard shows live status (chroot mount, X11
 Actions:
   [1]  Start GUI          [2]  Stop GUI          [3]  Mount Chroot
   [4]  Shell root         [5]  Shell ruusian     [6]  Clean & Repair
-  [8]  GPU Info           [9]  Synaptic Pkg Mgr  [10] Restart GUI
+  [8]  GPU Info           [10] Restart GUI
 
   [q] Quit   [r] Redraw screen
 ```
@@ -87,7 +86,6 @@ Actions:
 | [5] Shell ruusian | inline `busybox chroot` → `su -l ruusian` | User shell inside the chroot |
 | [6] Clean & Repair | `cleanup.sh` + `repair.sh` | Truncates logs, clears APT cache, `dpkg --configure -a`, `apt-get install -f` |
 | [8] GPU Info | `gpu-info.sh` | KGSL model, Turnip driver, Vulkan + Zink/EGL status |
-| [9] Synaptic Pkg Mgr | inline `chroot ... synaptic` | Launches the GUI software store on the desktop (see Known Issues) |
 | [10] Restart GUI | `stop-debian.sh` + `startxfce4_chrootDebian.sh` | Convenience full restart |
 
 ## Scripts Reference
@@ -130,7 +128,7 @@ Actions:
 |-------|------------|
 | `close_range` syscall crashes apps | `LD_PRELOAD=/home/ruusian/fix_mmap.so` |
 | `sudo`/`su` fail inside chroot ("effective uid is not 0") | `/data` is mounted `nosuid`; re-run **[3] Mount Chroot** (or **[1] Start GUI**) to remount with `suid` |
-| **GNOME Software 43.5 will not launch** ("lost connection to rendering server" / DRI3 not capable) | EGL/DRI3 init is incompatible with Turnip+Zink in this X11 setup. **Use Synaptic instead** (dashboard **[9]**, or the Synaptic icon on the desktop). Verified unfixable here. |
+| **GNOME Software 43.5 will not launch** ("lost connection to rendering server" / DRI3 not capable) | EGL/DRI3 init is incompatible with Turnip+Zink in this X11 setup. **Use the Synaptic desktop icon** (package management not wired into the dashboard). Verified unfixable here. |
 | Synaptic launched but shows "no packages" | Run `sudo apt update` first (a shell via dashboard **[5]**, or `apt update` in a terminal). Repos must be indexed before browsing. |
 | Stale X11 socket after crash | `stop-debian.sh` auto-cleans, or `rm /data/data/com.termux/files/usr/tmp/.X11-unix/X0` |
 | `SESSION_MANAGER=localhost` breaks xfwm4 | `user-session.sh` does `unset SESSION_MANAGER` |
@@ -166,9 +164,10 @@ When you edit a host script, update the copy in `scripts/` and vice-versa; the d
 | Date | Change |
 |------|--------|
 | Jul 9 | **Removed App Manager [7]** from dashboard (broken `q` quit loop → infinite "Invalid choice"; required uninstalled `dialog`). Deleted `app-manager.sh` from repo + bundle. Re-audit found source-tree drift: `configs/debian/usr/local/bin/vk_test` and `configs/debian/home/ruusian/fix_mmap.so/.c` were missing (only in `releases/mods/`), so bundle rebuilds silently dropped them — restored both to `configs/` and live chroot, rebuilt privacy-clean **gpu-modifications-bundle-20260709.tar.gz** (Zink+Turnip, vk_test, fix_mmap, no app-manager, no secrets). Verified [1]–[6],[8],[10] run clean. |
+| Jul 9 | **Removed [9] Synaptic Pkg Mgr** from dashboard menu + case (option was broken/redundant; package management is via the Synaptic desktop icon or shell [5]). **Fixed desktop health-check false-negative** in `startxfce4_chrootDebian.sh`: it failed whenever `xfce4-power-manager FAILED` was logged even though the desktop was fully ready — now only core WM/panel/desktop failures are fatal. Synced canonical copies to `~/`. README purged all [9]/Synaptic-dashboard references. |
 | Jul 9 | Full project audit (excluding dpkg manifest + release bundle): fixed 12 host/chroot script issues — `su` authentication failure (chroot `su` missing, `LD_PRELOAD` lost across `su`/`chroot`, `startxfce4` reverted `suid` fix); chroot PATH/term/suid drift; `vk_test` missing; broken dialog `chroot ... which`; `repair.sh` non-idempotent APT; `stop-debian.sh` unmount ordering; `cleanup.sh` secret purge; `app-manager.sh` hardcoded busybox path. Rebuilt privacy-clean **gpu-modifications-bundle-20260709.tar.gz** (Turnip+Zink, LD_PRELOAD wired, battery-monitor + vk_test added, fix_mmap.c present, no secrets). |
-| Jul 8 | Dashboard v3.2: added **[9] Synaptic Pkg Mgr** as the GUI software store (GNOME Software is broken on EGL here); **[10] Restart GUI** |
-| Jul 8 | Added `app-manager.sh` (terminal package browser) as dashboard **[7]** — later **removed** (broken quit loop, depended on uninstalled `dialog`); package management is via Synaptic [9] or a shell [5] |
+| Jul 8 | Dashboard v3.2: added **[10] Restart GUI** |
+| Jul 8 | Added `app-manager.sh` (terminal package browser) as dashboard **[7]** — later **removed** (broken quit loop, depended on uninstalled `dialog`); package management is via the Synaptic desktop icon or a shell [5] |
 | Jul 8 | `mount-debian.sh` & `startxfce4_chrootDebian.sh`: remount `/data` with `suid` so `sudo`/`su` work inside the chroot |
 | Jul 8 | `user-session.sh`: `pgrep` guards around all XFCE components to prevent duplicate processes |
 | Jul 8 | Removed VirGL; GPU is Turnip+Zink only |
@@ -185,7 +184,7 @@ If you are an AI agent reading this file:
 3. **X11 socket** at `/data/data/com.termux/files/usr/tmp/.X11-unix/X0` must be `srwxrwxrwx`. It only appears after the Termux:X11 Android app connects.
 4. **Chroot /tmp** is bind-mounted from host's `$TERMUX_TMP` (same inode).
 5. **`pgrep` inside chroot** is BusyBox; use `-x` for exact name match.
-6. **GNOME Software is broken here** — never rely on it; use Synaptic (dashboard [9]).
+6. **GNOME Software is broken here** — never rely on it; use the Synaptic desktop icon.
 7. **`am`** is at `/system/bin/am` (root-only); use `termux-am` wrapper in Termux context.
 8. **Test non-interactive options** with `printf '3\n\nq\n' | timeout 30 bash cmds.sh`.
 9. **Keep `~/` and `scripts/` in sync** when editing host-side dashboard scripts.

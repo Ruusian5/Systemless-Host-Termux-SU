@@ -84,9 +84,16 @@ fi
 
 # ── 1. KERNEL-LEVEL HANDSHAKE ───────────────────────────────────────
 
-# Kill stale termux-x11 process if socket stale
+# If the X server process is gone, the previous X socket is a stale ghost
+# that would otherwise fool the readiness loop into thinking the display is
+# up. Remove it so termux-x11 recreates a fresh socket when the app connects.
 if [ -z "$X_PROC" ]; then
     pkill -9 -f "termux-x11" 2>/dev/null || true
+    sleep 0.5
+    if [ -S "$TERMUX_TMP/.X11-unix/X0" ]; then
+        echo -e "${C_YELLOW}[~] Removing stale X11 socket from previous crash${NC}"
+        rm -f "$TERMUX_TMP"/.X0-lock "$TERMUX_TMP"/.X11-unix/X0 2>/dev/null
+    fi
 fi
 
 terminate_process "pulseaudio"
@@ -190,6 +197,17 @@ echo ""
 chmod 777 "$TERMUX_TMP/.X11-unix/X0" 2>/dev/null || true
 echo -e "${C_GREEN}[✓] Graphics Bridge Established.${NC}"
 
+# Final guard: socket exists but the Android Termux:X11 app already dropped
+# (Binder DeadObjectException). Surface it clearly instead of a false "running".
+X_APP_ALIVE=0
+pgrep -f "com.termux.x11" >/dev/null 2>&1 && X_APP_ALIVE=1
+pgrep -f "termux-x11" >/dev/null 2>&1 && X_APP_ALIVE=1
+if [ -S "$TERMUX_TMP/.X11-unix/X0" ] && [ $X_APP_ALIVE -eq 0 ]; then
+    echo -e "${C_RED}[!] X socket present but the Termux:X11 app is NOT connected.${NC}"
+    echo -e "${C_YELLOW}  → The Android app likely crashed or was backgrounded. Open Termux:X11 again.${NC}"
+    echo -e "${C_YELLOW}  → If it keeps dying, check: app not battery-optimized, enough free RAM, GPU driver stable.${NC}"
+fi
+
 # ── 5. LAUNCH DESKTOP ───────────────────────────────────────────────
 # CRITICAL: remount /data with suid so sudo/su work inside chroot
 su -c "busybox mount -o remount,dev,suid /data" 2>/dev/null
@@ -209,18 +227,26 @@ disown
 
 # Desktop health check: pass only when the session actually became ready.
 # user-session.sh writes "=== Full XFCE Desktop Ready ===" on success and
-# "<comp> FAILED" for any component that did not start.
+# "<comp> FAILED" for any component that did not start. A FAILED power-manager
+# is non-fatal (the desktop still works), so only core components are fatal.
 sleep 3
 LOG_OK=0
 if su -c "test -f $DEBIANPATH/home/ruusian/session_debug.log" 2>/dev/null; then
-    if su -c "grep -q 'Full XFCE Desktop Ready' $DEBIANPATH/home/ruusian/session_debug.log" 2>/dev/null \
-       && ! su -c "grep -q 'FAILED' $DEBIANPATH/home/ruusian/session_debug.log" 2>/dev/null; then
+    if su -c "grep -q 'Full XFCE Desktop Ready' $DEBIANPATH/home/ruusian/session_debug.log" 2>/dev/null; then
         LOG_OK=1
+        for _core in xfwm4 xfsettingsd xfdesktop xfce4-panel; do
+            if su -c "grep -q \"  - $_core FAILED\" $DEBIANPATH/home/ruusian/session_debug.log" 2>/dev/null; then
+                LOG_OK=0
+                break
+            fi
+        done
     fi
 fi
 if [ $LOG_OK -eq 0 ]; then
     echo -e "${C_YELLOW}[!] Desktop health-check inconclusive — inspect session_debug.log:${NC}"
     echo -e "${C_YELLOW}    $DEBIANPATH/home/ruusian/session_debug.log${NC}"
+else
+    echo -e "${C_GREEN}[✓] Desktop health-check passed${NC}"
 fi
 
 echo ""
