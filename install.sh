@@ -67,7 +67,6 @@ alias deb='bash ~/cli-bridge.sh'
 if [[ $- == *i* ]]; then
     termux-wake-lock 2>/dev/null
     { bash ~/mount-debian.sh > /dev/null 2>&1; } & disown
-    timeout 3s bash ~/cmds.sh --once
 fi
 EOF
     echo -e "  [✓] Aliases and banner added to .bashrc"
